@@ -8,7 +8,7 @@ import { LayoutGrid, BarChart3 } from 'lucide-react';
 interface ProjectsViewProps {
   projects: any[];
   onCreateProject: (data: any) => void;
-  onProjectClick: (project: any) => void;
+  onProjectClick: (projectId: string) => void;
 }
 
 export default function ProjectsView({ projects, onCreateProject, onProjectClick }: ProjectsViewProps) {
@@ -82,7 +82,7 @@ export default function ProjectsView({ projects, onCreateProject, onProjectClick
             <ProjectCard 
               key={project.id} 
               project={project}
-              onClick={() => onProjectClick(project)}
+              onClick={() => onProjectClick(project.id)}
             />
           ))}
         </div>

@@ -11,7 +11,7 @@ import DocumentChecklistView from './DocumentChecklistView';
 import TemplateLibraryView from './TemplateLibraryView';
 import DatabaseHealthDashboard from './DatabaseHealthDashboard';
 import { AnalyticsView } from './AnalyticsView';
-
+import ProjectView from './ProjectView';
 
 
 
@@ -207,9 +207,9 @@ export default function AppLayout() {
           />
         )}
         {activeTab === 'projects' && selectedProjectForChecklist && (
-          <DocumentChecklistView 
-            projectId={selectedProjectForChecklist} 
-            onClose={() => setSelectedProjectForChecklist(null)} 
+          <ProjectView
+            projectId={selectedProjectForChecklist}
+            onClose={() => setSelectedProjectForChecklist(null)}
           />
         )}
 
