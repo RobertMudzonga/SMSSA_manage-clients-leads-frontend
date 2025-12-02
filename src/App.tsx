@@ -17,6 +17,7 @@ import LeadsPage from "@/pages/LeadsPage";
 import ProjectsPage from "@/pages/ProjectsPage"; 
 import UsersPage from "@/pages/UsersPage";
 import ProjectDetailsPage from "@/pages/ProjectDetails"; // <-- NEW IMPORT
+import ProjectDetailsDemoPage from "@/pages/ProjectDetailsDemo"; // <-- DEMO PAGE
 
 const queryClient = new QueryClient();
 
@@ -49,6 +50,9 @@ const App = () => (
               {/* --- DYNAMIC PROJECT DETAIL ROUTE (MANDATORY) --- */}
               {/* This is the route that loads the multi-stage view we are building */}
               <Route path="projects/:id" element={<ProjectDetailsPage />} />
+              
+              {/* --- DEMO ROUTE FOR TESTING --- */}
+              <Route path="projects-demo" element={<ProjectDetailsDemoPage />} />
             </Route>
 
             {/* Catch-all Route */}
