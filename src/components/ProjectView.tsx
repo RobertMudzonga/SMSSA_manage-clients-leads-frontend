@@ -5,6 +5,7 @@ import { Card } from './ui/card';
 import { Badge } from './ui/badge';
 import { Checkbox } from './ui/checkbox';
 import DocumentChecklistView from './DocumentChecklistView';
+import { useToast } from '@/hooks/use-toast';
 
 interface ProjectViewProps {
   projectId: string;
@@ -30,6 +31,7 @@ export default function ProjectView({ projectId, onClose }: ProjectViewProps) {
     vfs_receipt: '',
     receipt_number: ''
   });
+  const { toast } = useToast();
 
   useEffect(() => {
     loadProject();
@@ -78,7 +80,7 @@ export default function ProjectView({ projectId, onClose }: ProjectViewProps) {
     if (ok) {
       await updateProjectStage(3);
     } else {
-      alert('All required documents must be collected to advance this stage.');
+      toast({ title: 'Required documents missing', description: 'All required documents must be collected to advance this stage.', variant: 'destructive' });
     }
   };
 
@@ -86,7 +88,7 @@ export default function ProjectView({ projectId, onClose }: ProjectViewProps) {
     if (supervisorReviewed && submitted) {
       await updateProjectStage(4);
     } else {
-      alert('Both tasks (Reviewed by Supervisor and Submit) must be completed.');
+      toast({ title: 'Tasks incomplete', description: 'Both tasks (Reviewed by Supervisor and Submit) must be completed.', variant: 'destructive' });
     }
   };
 

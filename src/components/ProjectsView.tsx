@@ -4,18 +4,20 @@ import CreateProjectModal from './CreateProjectModal';
 import GanttChart from './GanttChart';
 import ProjectAlerts from './ProjectAlerts';
 import { LayoutGrid, BarChart3 } from 'lucide-react';
+import ProjectsKanbanView from './ProjectsKanbanView';
 
 interface ProjectsViewProps {
   projects: any[];
   onCreateProject: (data: any) => void;
   onProjectClick: (projectId: string) => void;
+  onRefresh?: () => void;
 }
 
-export default function ProjectsView({ projects, onCreateProject, onProjectClick }: ProjectsViewProps) {
+export default function ProjectsView({ projects, onCreateProject, onProjectClick, onRefresh }: ProjectsViewProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
-  const [viewMode, setViewMode] = useState<'grid' | 'gantt'>('grid');
+  const [viewMode, setViewMode] = useState<'grid' | 'gantt' | 'kanban'>('grid');
 
 
   const filteredProjects = projects.filter(p => {
@@ -43,6 +45,12 @@ export default function ProjectsView({ projects, onCreateProject, onProjectClick
             >
               <BarChart3 className="w-4 h-4" />
               <span className="text-sm">Timeline</span>
+            </button>
+            <button
+              onClick={() => setViewMode('kanban')}
+              className={`px-3 py-2 rounded flex items-center gap-2 ${viewMode === 'kanban' ? 'bg-white shadow' : ''}`}
+            >
+              <span className="text-sm">Kanban</span>
             </button>
           </div>
           <button 
@@ -86,8 +94,10 @@ export default function ProjectsView({ projects, onCreateProject, onProjectClick
             />
           ))}
         </div>
-      ) : (
+      ) : viewMode === 'gantt' ? (
         <GanttChart projects={filteredProjects} />
+      ) : (
+        <ProjectsKanbanView projects={filteredProjects} onProjectClick={onProjectClick} onRefresh={onCreateProject as any} />
       )}
 
 

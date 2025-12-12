@@ -1,0 +1,233 @@
+import { useState } from 'react';
+import { X, MessageSquare, Trash2, Archive, Calendar, Mail, Phone, Building } from 'lucide-react';
+import { Button } from './ui/button';
+import { Textarea } from './ui/textarea';
+
+interface LeadDetailModalProps {
+  lead: any;
+  isOpen: boolean;
+  onClose: () => void;
+  onAddComment: (leadId: number, comment: string) => void;
+  onMarkLost: (leadId: number, reason: string) => void;
+  onDelete: (leadId: number) => void;
+}
+
+export default function LeadDetailModal({
+  lead,
+  isOpen,
+  onClose,
+  onAddComment,
+  onMarkLost,
+  onDelete
+}: LeadDetailModalProps) {
+  const [comment, setComment] = useState('');
+  const [lostReason, setLostReason] = useState('');
+  const [showLostDialog, setShowLostDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+
+  if (!isOpen || !lead) return null;
+
+  const handleAddComment = () => {
+    if (comment.trim()) {
+      onAddComment(lead.lead_id, comment);
+      setComment('');
+    }
+  };
+
+  const handleMarkLost = () => {
+    if (lostReason.trim()) {
+      onMarkLost(lead.lead_id, lostReason);
+      setShowLostDialog(false);
+      setLostReason('');
+      onClose();
+    }
+  };
+
+  const handleDelete = () => {
+    onDelete(lead.lead_id);
+    setShowDeleteDialog(false);
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 sticky top-0 bg-white">
+          <h2 className="text-xl font-bold text-gray-900">
+            {lead.first_name} {lead.last_name}
+          </h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+
+        {/* Lead Information */}
+        <div className="p-6 space-y-6">
+          {/* Contact Details */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                <Mail className="w-4 h-4 inline mr-1" />
+                Email
+              </label>
+              <p className="text-gray-900">{lead.email || 'N/A'}</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                <Phone className="w-4 h-4 inline mr-1" />
+                Phone
+              </label>
+              <p className="text-gray-900">{lead.phone || 'N/A'}</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                <Building className="w-4 h-4 inline mr-1" />
+                Company
+              </label>
+              <p className="text-gray-900">{lead.company || 'N/A'}</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Source
+              </label>
+              <p className="text-gray-900">{lead.source || 'N/A'}</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                <Calendar className="w-4 h-4 inline mr-1" />
+                Created
+              </label>
+              <p className="text-gray-900">
+                {lead.created_at ? new Date(lead.created_at).toLocaleDateString() : 'N/A'}
+              </p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Last Updated
+              </label>
+              <p className="text-gray-900">
+                {lead.updated_at ? new Date(lead.updated_at).toLocaleDateString() : 'N/A'}
+              </p>
+            </div>
+          </div>
+
+          {/* Notes/History */}
+          {lead.notes && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Notes & History
+              </label>
+              <div className="bg-gray-50 rounded-lg p-4 text-sm text-gray-700 whitespace-pre-wrap">
+                {lead.notes}
+              </div>
+            </div>
+          )}
+
+          {/* Add Comment Section */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              <MessageSquare className="w-4 h-4 inline mr-1" />
+              Add Comment
+            </label>
+            <Textarea
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              placeholder="Add a note or comment about this lead..."
+              className="w-full mb-2"
+              rows={3}
+            />
+            <Button
+              onClick={handleAddComment}
+              disabled={!comment.trim()}
+              className="bg-teal-600 hover:bg-teal-700 text-white"
+            >
+              Add Comment
+            </Button>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex gap-3 pt-4 border-t border-gray-200">
+            <Button
+              onClick={() => setShowLostDialog(true)}
+              className="flex-1 bg-orange-600 hover:bg-orange-700 text-white"
+            >
+              <Archive className="w-4 h-4 mr-2" />
+              Mark as Lost
+            </Button>
+            <Button
+              onClick={() => setShowDeleteDialog(true)}
+              className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Delete (Duplicate)
+            </Button>
+          </div>
+        </div>
+
+        {/* Lost Reason Dialog */}
+        {showLostDialog && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]">
+            <div className="bg-white rounded-lg p-6 w-full max-w-md">
+              <h3 className="text-lg font-bold mb-4">Mark Lead as Lost</h3>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Reason for marking as lost:
+              </label>
+              <Textarea
+                value={lostReason}
+                onChange={(e) => setLostReason(e.target.value)}
+                placeholder="Enter the reason why this lead was lost..."
+                rows={4}
+                className="w-full mb-4"
+              />
+              <div className="flex gap-3">
+                <Button
+                  onClick={() => setShowLostDialog(false)}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleMarkLost}
+                  disabled={!lostReason.trim()}
+                  className="flex-1 bg-orange-600 hover:bg-orange-700 text-white"
+                >
+                  Mark as Lost
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Confirmation Dialog */}
+        {showDeleteDialog && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]">
+            <div className="bg-white rounded-lg p-6 w-full max-w-md">
+              <h3 className="text-lg font-bold mb-4 text-red-600">Delete Lead</h3>
+              <p className="text-gray-700 mb-4">
+                Are you sure you want to delete this lead? This action cannot be undone.
+                Only delete leads that are confirmed duplicates.
+              </p>
+              <div className="flex gap-3">
+                <Button
+                  onClick={() => setShowDeleteDialog(false)}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleDelete}
+                  className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                >
+                  Delete Lead
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

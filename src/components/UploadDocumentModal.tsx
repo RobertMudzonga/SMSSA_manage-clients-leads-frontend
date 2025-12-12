@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { useToast } from '@/hooks/use-toast';
 
 interface UploadDocumentModalProps {
   isOpen: boolean;
@@ -9,6 +10,7 @@ interface UploadDocumentModalProps {
 }
 
 export default function UploadDocumentModal({ isOpen, onClose, onSubmit, projectId }: UploadDocumentModalProps) {
+  const { toast } = useToast();
   const [formData, setFormData] = useState({
     document_name: '',
     document_type: 'Passport',
@@ -22,7 +24,7 @@ export default function UploadDocumentModal({ isOpen, onClose, onSubmit, project
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!file) {
-      alert('Please select a file to upload');
+      toast({ title: 'No file selected', description: 'Please select a file to upload', variant: 'destructive' });
       return;
     }
 
@@ -48,7 +50,7 @@ export default function UploadDocumentModal({ isOpen, onClose, onSubmit, project
       setFile(null);
     } catch (error) {
       console.error('Upload error:', error);
-      alert('Failed to upload file');
+      toast({ title: 'Upload failed', description: 'Failed to upload file', variant: 'destructive' });
     } finally {
       setUploading(false);
     }

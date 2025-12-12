@@ -8,6 +8,11 @@ import { ThemeProvider } from "@/components/theme-provider";
 import Index from "./pages/Index";
 import ClientPortal from "./pages/ClientPortal";
 import NotFound from "./pages/NotFound";
+import Signup from './pages/Signup';
+import EmployeesTableView from './components/EmployeesTableView';
+import EmployeesKanbanView from './components/EmployeesKanbanView';
+import OrgChartView from './components/OrgChartView';
+import AppraisalsListView from './components/AppraisalsListView';
 
 
 const queryClient = new QueryClient();
@@ -22,6 +27,11 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/client-portal" element={<ClientPortal />} />
+            <Route path="/signup" element={<Signup />} />
+            <Route path="/employees/table" element={<EmployeesTableView />} />
+            <Route path="/employees/kanban" element={<EmployeesKanbanView />} />
+            <Route path="/employees/org" element={<OrgChartView />} />
+            <Route path="/appraisals" element={<AppraisalsListView />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

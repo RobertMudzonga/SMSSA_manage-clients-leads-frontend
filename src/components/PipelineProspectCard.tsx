@@ -11,7 +11,7 @@ const STAGE_ORDER = [
   'opportunity', 'quote_requested', 'quote_sent', 'first_follow_up',
   'second_follow_up', 'mid_month_follow_up', 'month_end_follow_up',
   'next_month_follow_up', 'discount_requested', 'quote_accepted',
-  'engagement_sent', 'invoice_sent'
+  'engagement_sent', 'invoice_sent', 'payment_date_confirmed', 'won'
 ];
 
 export default function PipelineProspectCard({ 
@@ -86,6 +86,15 @@ export default function PipelineProspectCard({
             Next →
           </button>
         )}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onMoveStage(prospect.id, 'won');
+          }}
+          className="flex-1 px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700"
+        >
+          Won
+        </button>
       </div>
     </div>
   );

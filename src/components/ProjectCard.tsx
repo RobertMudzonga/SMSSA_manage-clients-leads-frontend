@@ -5,6 +5,7 @@ import { Calendar, AlertCircle, FileCheck, Link2, Copy } from 'lucide-react';
 import { Button } from './ui/button';
 import { supabase } from '@/lib/supabase';
 import { useState } from 'react';
+import { useToast } from '@/hooks/use-toast';
 
 
 interface ProjectCardProps {
@@ -15,6 +16,7 @@ interface ProjectCardProps {
 export default function ProjectCard({ project, onClick }: ProjectCardProps) {
   const [generatingAccess, setGeneratingAccess] = useState(false);
   const [portalUrl, setPortalUrl] = useState<string | null>(null);
+  const { toast } = useToast();
 
   const priorityColor = {
     high: 'text-red-600',
@@ -44,10 +46,10 @@ export default function ProjectCard({ project, onClick }: ProjectCardProps) {
       
       // Copy to clipboard
       navigator.clipboard.writeText(data.portalUrl);
-      alert('Client portal link copied to clipboard!');
+      toast({ title: 'Client portal link copied to clipboard!' });
     } catch (error) {
       console.error('Error generating access:', error);
-      alert('Failed to generate client portal access');
+      toast({ title: 'Failed to generate client portal access', variant: 'destructive' });
     } finally {
       setGeneratingAccess(false);
     }

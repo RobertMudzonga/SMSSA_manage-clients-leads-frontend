@@ -6,6 +6,7 @@ import { Badge } from './ui/badge';
 import { Checkbox } from './ui/checkbox';
 import { AlertCircle, CheckCircle2, Send } from 'lucide-react';
 import { MEDICAL_WARNING } from '@/utils/documentChecklists';
+import { useToast } from '@/hooks/use-toast';
 
 interface DocumentChecklistViewProps {
   projectId: string;
@@ -16,6 +17,7 @@ export default function DocumentChecklistView({ projectId, onClose }: DocumentCh
   const [checklist, setChecklist] = useState<any[]>([]);
   const [project, setProject] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
   useEffect(() => {
     loadChecklist();
@@ -59,7 +61,7 @@ export default function DocumentChecklistView({ projectId, onClose }: DocumentCh
       .update({ reminder_sent_date: new Date().toISOString() })
       .in('id', missingDocs.map(d => d.id));
     
-    alert(`Reminder sent for ${missingDocs.length} missing documents`);
+    toast({ title: 'Reminder sent', description: `Reminder sent for ${missingDocs.length} missing documents` });
     loadChecklist();
   };
 

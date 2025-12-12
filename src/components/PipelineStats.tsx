@@ -5,20 +5,33 @@ interface PipelineStatsProps {
 }
 
 export default function PipelineStats({ prospects }: PipelineStatsProps) {
-  const totalValue = prospects.reduce((sum, p) => sum + (p.quote_amount || 0), 0);
-  const avgDealSize = prospects.length > 0 ? totalValue / prospects.length : 0;
-  const conversionRate = prospects.length > 0 
-    ? (prospects.filter(p => ['quote_accepted', 'engagement_sent', 'invoice_sent'].includes(p.pipeline_stage)).length / prospects.length) * 100 
-    : 0;
-  const activeLeads = prospects.filter(p => 
-    !['quote_accepted', 'engagement_sent', 'invoice_sent'].includes(p.pipeline_stage)
-  ).length;
+  // Exclude explicitly lost deals from pipeline calculations
+  const isLost = (p: any) => p.status && String(p.status).toLowerCase() === 'lost';
+
+  // Consider a deal "won" if its pipeline stage indicates acceptance/invoice or status explicitly set to 'won'
+  const wonStages = ['quote_accepted', 'engagement_sent', 'invoice_sent'];
+  const isWon = (p: any) => wonStages.includes(p.pipeline_stage) || (p.status && String(p.status).toLowerCase() === 'won');
+
+  // Pipeline members: all deals that are not lost
+  const pipelineMembers = prospects.filter(p => !isLost(p));
+  const totalPipelineDeals = pipelineMembers.length;
+
+  // Total pipeline value is sum of quote amounts for all deals in the pipeline (excluding lost)
+  const totalPipelineValue = pipelineMembers.reduce((sum, p) => sum + (Number(p.quote_amount) || 0), 0);
+
+  // Avg deal size across the pipeline (excluding lost)
+  const avgDealSize = totalPipelineDeals > 0 ? totalPipelineValue / totalPipelineDeals : 0;
+
+  const wonDeals = pipelineMembers.filter(p => isWon(p)).length;
+  const conversionRate = totalPipelineDeals > 0 ? (wonDeals / totalPipelineDeals) * 100 : 0;
+
+  const activeLeads = pipelineMembers.filter(p => !isWon(p)).length;
 
   const stats = [
-    { label: 'Total Pipeline Value', value: `$${totalValue.toLocaleString()}`, icon: DollarSign, color: 'bg-green-100 text-green-600' },
+    { label: 'Total Pipeline Value', value: `$${totalPipelineValue.toLocaleString()}`, icon: DollarSign, color: 'bg-green-100 text-green-600' },
     { label: 'Active Leads', value: activeLeads, icon: Users, color: 'bg-blue-100 text-blue-600' },
-    { label: 'Avg Deal Size', value: `$${Math.round(avgDealSize).toLocaleString()}`, icon: Target, color: 'bg-purple-100 text-purple-600' },
-    { label: 'Conversion Rate', value: `${(Number(conversionRate) || 0).toFixed(1)}%`, icon: TrendingUp, color: 'bg-teal-100 text-teal-600' }
+    { label: 'Avg Deal Size', value: `$${avgDealSize > 0 ? avgDealSize.toFixed(2) : '0.00'}`, icon: Target, color: 'bg-purple-100 text-purple-600' },
+    { label: 'Conversion Rate', value: `${conversionRate.toFixed(1)}%`, icon: TrendingUp, color: 'bg-teal-100 text-teal-600' }
 
   ];
 

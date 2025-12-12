@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { EmployeeCard } from './EmployeeCard';
 import { EmployeeDetailModal } from './EmployeeDetailModal';
+import AddEmployeeModal from './AddEmployeeModal';
 import { Plus, Search, Download, Filter } from 'lucide-react';
 
 interface EmployeesViewProps {
@@ -11,8 +12,9 @@ interface EmployeesViewProps {
   metrics: any[];
   goals: any[];
   reviews: any[];
-  onAddEmployee: () => void;
+  onAddEmployee: (data?: any) => Promise<any> | void;
   onCalculateMetrics: (employeeId: string) => void;
+  onDeleteEmployee?: (id: string) => void;
 }
 
 export function EmployeesView({ 
@@ -21,13 +23,15 @@ export function EmployeesView({
   goals, 
   reviews, 
   onAddEmployee,
-  onCalculateMetrics 
+  onCalculateMetrics,
+  onDeleteEmployee
 }: EmployeesViewProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterDepartment, setFilterDepartment] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
   const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
 
   const filteredEmployees = employees.filter(emp => {
     const matchesSearch = emp.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -66,7 +70,7 @@ export function EmployeesView({
             <Download className="w-4 h-4 mr-2" />
             Export Report
           </Button>
-          <Button onClick={onAddEmployee}>
+          <Button onClick={() => setShowAddModal(true)}>
             <Plus className="w-4 h-4 mr-2" />
             Add Employee
           </Button>
@@ -127,8 +131,23 @@ export function EmployeesView({
           reviews={getEmployeeReviews(selectedEmployee.id)}
           open={showDetailModal}
           onClose={() => setShowDetailModal(false)}
+          onDelete={onDeleteEmployee}
         />
       )}
+      <AddEmployeeModal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        onSubmit={async (data) => {
+          try {
+            const res = await onAddEmployee?.(data as any);
+            if (res && res.error) {
+              console.error('Failed to add employee from modal', res.error);
+            }
+          } catch (err) {
+            console.error('Failed to add employee from modal', err);
+          }
+        }}
+      />
     </div>
   );
 }

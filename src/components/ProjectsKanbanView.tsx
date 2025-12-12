@@ -1,0 +1,146 @@
+import React, { useEffect, useState } from 'react';
+import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
+
+interface ProjectsKanbanViewProps {
+  projects: any[];
+  onProjectClick?: (id: string) => void;
+  onRefresh?: () => void;
+}
+
+const STAGE_COLUMNS: { key: string; label: string }[] = [
+  { key: 'backlog', label: 'Backlog' },
+  { key: 'active', label: 'Active' },
+  { key: 'in_progress', label: 'In Progress' },
+  { key: 'on_hold', label: 'On Hold' },
+  { key: 'completed', label: 'Completed' }
+];
+
+function mapProjectToColumn(project: any) {
+  // Prefer explicit status, otherwise infer from current_stage/current_stage_id
+  const status = (project.status || project.current_stage || project.current_stage_id || '').toString().toLowerCase();
+  if (status === 'completed' || status === '6' || status === 'done') return 'completed';
+  if (status === 'in-progress' || status === 'in_progress' || status === '3') return 'in_progress';
+  if (status === 'on-hold' || status === 'on_hold') return 'on_hold';
+  if (status === 'active' || status === '1' || status === '2') return 'active';
+  return 'backlog';
+}
+
+export default function ProjectsKanbanView({ projects, onProjectClick, onRefresh }: ProjectsKanbanViewProps) {
+  const [stages, setStages] = useState<any[]>([]);
+  const columns: Record<string, any[]> = { backlog: [], active: [], in_progress: [], on_hold: [], completed: [] };
+  for (const p of projects) {
+    const col = mapProjectToColumn(p);
+    columns[col].push(p);
+  }
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const r = await fetch('/api/prospects/stages');
+        if (r.ok) {
+          const arr = await r.json();
+          setStages(arr || []);
+        }
+      } catch (err) {
+        // ignore — stages are optional
+        console.warn('Failed to load stages for Kanban', err);
+      }
+    })();
+  }, []);
+
+  const applyStageToProject = async (projectId: number | string, stageId: number) => {
+    try {
+      const resp = await fetch(`/api/projects/${projectId}/stage`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ current_stage: stageId })
+      });
+      if (resp.ok) {
+        if (onRefresh) onRefresh();
+      } else {
+        const err = await resp.json().catch(() => null);
+        alert(`Failed to update stage: ${err?.error || resp.status}`);
+      }
+    } catch (err) {
+      alert('Network error updating stage');
+    }
+  };
+
+  const onDragEnd = async (result: DropResult) => {
+    if (!result.destination) return;
+    const fromId = result.source.droppableId;
+    const toId = result.destination.droppableId;
+    if (fromId === toId) return; // no-op
+
+    // Ask user to pick a stage for the destination column
+    if (!stages || stages.length === 0) {
+      // fallback: simple confirm
+      if (!window.confirm('Move project to this column?')) return;
+      // no mapping available; just refresh
+      if (onRefresh) onRefresh();
+      return;
+    }
+
+    const list = stages.map(s => `${s.stage_id}: ${s.name}`).join('\n');
+    const pick = window.prompt(`Choose stage id for destination column:\n${list}`);
+    if (!pick) return;
+    const stageId = parseInt(pick, 10);
+    if (isNaN(stageId)) { alert('Invalid stage id'); return; }
+
+    // determine which project was moved
+    const projIndex = result.source.index;
+    const project = columns[fromId][projIndex];
+    if (!project) return;
+    await applyStageToProject(project.project_id || project.id, stageId);
+  };
+
+  return (
+    <div className="w-full">
+      <DragDropContext onDragEnd={onDragEnd}>
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          {STAGE_COLUMNS.map(col => (
+            <Droppable droppableId={col.key} key={col.key}>
+              {(provided) => (
+                <div ref={provided.innerRef} {...provided.droppableProps} className="bg-white rounded border p-3 flex flex-col">
+                  <div className="font-semibold mb-2">{col.label} <span className="text-sm text-gray-500">({columns[col.key].length})</span></div>
+                  <div className="flex-1 space-y-2 overflow-y-auto max-h-[60vh]">
+                    {columns[col.key].map((project: any, idx: number) => (
+                      <Draggable key={project.project_id || project.id} draggableId= {String(project.project_id || project.id)} index={idx}>
+                        {(dr) => (
+                          <div ref={dr.innerRef} {...dr.draggableProps} {...dr.dragHandleProps} className="p-3 border rounded bg-gray-50">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <div className="font-medium">{project.project_name || project.name || `Project ${project.project_id || project.id}`}</div>
+                                <div className="text-sm text-gray-500">{project.client_name || project.company || ''}</div>
+                              </div>
+                              <div className="flex flex-col items-end">
+                                <button onClick={() => onProjectClick?.(String(project.project_id || project.id))} className="text-xs px-2 py-1 bg-white border rounded">Open</button>
+                                <div className="mt-2">
+                                  <select
+                                    value={project.current_stage || ''}
+                                    onChange={(e) => applyStageToProject(project.project_id || project.id, Number(e.target.value))}
+                                    className="text-xs px-2 py-1 bg-white border rounded"
+                                  >
+                                    <option value="">Set stage</option>
+                                    {stages.map(s => (
+                                      <option key={s.stage_id} value={s.stage_id}>{s.name}</option>
+                                    ))}
+                                  </select>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </Draggable>
+                    ))}
+                    {provided.placeholder}
+                  </div>
+                </div>
+              )}
+            </Droppable>
+          ))}
+        </div>
+      </DragDropContext>
+    </div>
+  );
+}

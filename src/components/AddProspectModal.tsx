@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useToast } from '@/hooks/use-toast';
 import { X } from 'lucide-react';
 
 interface AddProspectModalProps {
@@ -8,6 +9,7 @@ interface AddProspectModalProps {
 }
 
 export default function AddProspectModal({ isOpen, onClose, onSubmit }: AddProspectModalProps) {
+  const { toast } = useToast();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -19,10 +21,31 @@ export default function AddProspectModal({ isOpen, onClose, onSubmit }: AddProsp
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
-    setFormData({ name: '', email: '', phone: '', lead_source: '', pipeline_stage: 'opportunity', notes: '' });
+
+    try {
+      const response = await fetch('http://localhost:5000/api/prospects', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to add prospect');
+      }
+
+      const newProspect = await response.json();
+      onSubmit(newProspect);
+      setFormData({ name: '', email: '', phone: '', lead_source: '', pipeline_stage: 'opportunity', notes: '' });
+      onClose();
+    } catch (error: any) {
+      console.error('Error adding prospect:', error);
+      toast({ title: 'Failed to add prospect', description: error.message || 'Unknown error', variant: 'destructive' });
+    }
   };
 
   return (

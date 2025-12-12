@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Search, Edit, Trash2, FileText, Eye } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import TemplateEditorModal from './TemplateEditorModal';
 import TemplatePreviewModal from './TemplatePreviewModal';
 import { toast } from 'sonner';
@@ -118,8 +119,19 @@ export default function TemplateLibraryView() {
   };
 
   const handleDeleteTemplate = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this template?')) return;
+    // open confirmation dialog instead
+    setDeletingTemplateId(id);
+    setConfirmDeleteOpen(true);
+  };
 
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [deletingTemplateId, setDeletingTemplateId] = useState<string | null>(null);
+
+  const performDeleteTemplate = async () => {
+    const id = deletingTemplateId;
+    setConfirmDeleteOpen(false);
+    setDeletingTemplateId(null);
+    if (!id) return;
     try {
       const { error } = await supabase
         .from('document_templates')
@@ -243,25 +255,31 @@ export default function TemplateLibraryView() {
         ))}
       </div>
 
+      <TemplateEditorModal isOpen={isEditorOpen} template={editingTemplate} onClose={() => setIsEditorOpen(false)} onSave={handleSaveTemplate} />
+      <TemplatePreviewModal isOpen={isPreviewOpen} template={previewTemplate} onClose={() => setIsPreviewOpen(false)} />
+
+      <Dialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Confirm delete</DialogTitle>
+            <DialogDescription>Are you sure you want to delete this template? This action will hide it from the library.</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <div className="flex gap-2 justify-end">
+              <button className="px-3 py-1 rounded bg-gray-100" onClick={() => setConfirmDeleteOpen(false)}>Cancel</button>
+              <button className="px-3 py-1 rounded bg-red-600 text-white" onClick={performDeleteTemplate}>Delete</button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
       {filteredTemplates.length === 0 && (
         <div className="text-center py-12">
           <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
           <p className="text-gray-600">No templates found</p>
         </div>
       )}
-
-      <TemplateEditorModal
-        isOpen={isEditorOpen}
-        onClose={() => { setIsEditorOpen(false); setEditingTemplate(null); }}
-        onSave={handleSaveTemplate}
-        template={editingTemplate}
-      />
-
-      <TemplatePreviewModal
-        isOpen={isPreviewOpen}
-        onClose={() => { setIsPreviewOpen(false); setPreviewTemplate(null); }}
-        template={previewTemplate}
-      />
+      
     </div>
   );
 }
