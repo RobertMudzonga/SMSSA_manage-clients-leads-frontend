@@ -323,47 +323,58 @@ export default function AppLayout() {
     if (!error) loadData();
   };
 
-  const handleAddEmployee = async () => {
-    // Quick add: prompt for name and email and insert a new employee record
+  const handleAddEmployee = async (data?: { full_name: string; work_email: string; job_position?: string; department?: string | null; manager_id?: number | null }) => {
+    // Prefer using the AddEmployeeModal form. If no data is provided,
+    // switch to the Employees tab and prompt the user to use the form.
+    if (!data) {
+      setActiveTab('employees');
+      toast({ title: 'Use the Add Employee form', description: 'Open Employees → Add Employee to create a new account' });
+      return { error: 'no_form_data' };
+    }
+
+    // Basic validation (same rules as the modal)
     try {
-      const fullName = window.prompt('Employee full name')?.trim();
-      if (!fullName) {
-        toast({ title: 'Cancelled', description: 'Employee creation cancelled' });
-        return;
+      const { full_name: fullName, work_email: workEmail } = data as any;
+      if (!fullName || !workEmail) {
+        toast({ title: 'Missing fields', description: 'Please provide name and work email', variant: 'destructive' });
+        return { error: 'missing_fields' };
       }
-      const workEmail = window.prompt('Employee work email (e.g. name@immigrationspecialists.co.za)')?.trim();
-      if (!workEmail) {
-        toast({ title: 'Cancelled', description: 'Employee creation cancelled' });
-        return;
-      }
-      // Basic validation: require company domain
       const allowedDomain = '@immigrationspecialists.co.za';
       if (!workEmail.includes('@') || !workEmail.toLowerCase().endsWith(allowedDomain)) {
         toast({ title: 'Invalid email', description: `Work email must be a ${allowedDomain} address`, variant: 'destructive' });
-        return;
+        return { error: 'invalid_email' };
       }
 
       try {
         const resp = await fetch(`${API_BASE}/employees`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ full_name: fullName, work_email: workEmail, job_position: 'Staff', department: null, manager_id: null })
+          body: JSON.stringify({
+            full_name: fullName,
+            work_email: workEmail.toLowerCase(),
+            job_position: data.job_position || 'Staff',
+            department: data.department ?? null,
+            manager_id: data.manager_id ?? null
+          })
         });
         const respJson = await resp.json().catch(() => null);
         if (!resp.ok) {
           console.error('Failed to add employee (backend):', respJson);
           toast({ title: 'Failed to add employee', description: respJson?.error || respJson?.message || 'Unknown', variant: 'destructive' });
-          return;
+          return { error: respJson };
         }
         toast({ title: 'Employee added', description: respJson?.full_name || fullName });
         await loadData();
+        return respJson;
       } catch (err) {
         console.error('Error adding employee via backend:', err);
         toast({ title: 'Failed to add employee', description: String(err), variant: 'destructive' });
+        return { error: err };
       }
     } catch (err) {
-      console.error('Error adding employee:', err);
+      console.error('Error validating employee data:', err);
       toast({ title: 'Failed to add employee', description: String(err), variant: 'destructive' });
+      return { error: err };
     }
   };
 
