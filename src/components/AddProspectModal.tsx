@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { API_BASE } from '../lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { X } from 'lucide-react';
 
@@ -25,7 +26,7 @@ export default function AddProspectModal({ isOpen, onClose, onSubmit }: AddProsp
     e.preventDefault();
 
     try {
-      const response = await fetch('http://localhost:5000/api/prospects', {
+      const response = await fetch(`${API_BASE}/prospects`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

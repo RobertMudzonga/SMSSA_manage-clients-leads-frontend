@@ -16,6 +16,7 @@ import DatabaseHealthDashboard from './DatabaseHealthDashboard';
 import { AnalyticsView } from './AnalyticsView';
 import ProjectView from './ProjectView';
 import LeadsView from './LeadsView';
+import { API_BASE } from '../lib/api';
 
 export default function AppLayout() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -41,7 +42,7 @@ export default function AppLayout() {
   const loadData = async () => {
     // Fetch prospects from backend API
     try {
-      const prospectsResponse = await fetch('http://localhost:5000/api/prospects');
+      const prospectsResponse = await fetch(`${API_BASE}/prospects`);
       const prospectsData = prospectsResponse.ok ? await prospectsResponse.json() : [];
       setProspects(prospectsData || []);
     } catch (error) {
@@ -53,7 +54,7 @@ export default function AppLayout() {
     const { data: documentsData } = await supabase.from('documents').select('*').order('created_at', { ascending: false });
     let employeesData = [];
     try {
-      const resp = await fetch('http://localhost:5000/api/employees');
+      const resp = await fetch(`${API_BASE}/employees`);
       if (resp.ok) {
         employeesData = await resp.json();
         setEmployeesLoadError(null);
@@ -83,7 +84,7 @@ export default function AppLayout() {
 
   const handleAddProspect = async (data: any) => {
     try {
-      const response = await fetch('http://localhost:5000/api/prospects', {
+      const response = await fetch(`${API_BASE}/prospects`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -106,7 +107,7 @@ export default function AppLayout() {
 
   const handleUpdateProspect = async (id: string, data: any) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/prospects/${id}`, {
+      const response = await fetch(`${API_BASE}/prospects/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
@@ -154,7 +155,7 @@ export default function AppLayout() {
 
   const handleSetProspectTags = async (id: string, tagIds: number[]) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/prospects/${id}/tags`, {
+      const response = await fetch(`${API_BASE}/prospects/${id}/tags`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tag_ids: tagIds })
@@ -173,7 +174,7 @@ export default function AppLayout() {
 
   const handleMarkProspectLost = async (id: string, reason = 'Marked lost by user') => {
     try {
-      const response = await fetch(`http://localhost:5000/api/prospects/${id}/lost`, {
+      const response = await fetch(`${API_BASE}/prospects/${id}/lost`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ reason })
@@ -196,7 +197,7 @@ export default function AppLayout() {
 
   const handleDeleteProspect = async (id: string) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/prospects/${id}`, { method: 'DELETE' });
+      const response = await fetch(`${API_BASE}/prospects/${id}`, { method: 'DELETE' });
       if (response.ok) {
         toast({ title: 'Prospect deleted' });
         await loadData();
@@ -239,7 +240,7 @@ export default function AppLayout() {
         return null;
       }
 
-      const response = await fetch(`http://localhost:5000/api/prospects/${prospectId}/stage`, {
+      const response = await fetch(`${API_BASE}/prospects/${prospectId}/stage`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -343,7 +344,7 @@ export default function AppLayout() {
       }
 
       try {
-        const resp = await fetch('http://localhost:5000/api/employees', {
+        const resp = await fetch(`${API_BASE}/employees`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ full_name: fullName, work_email: workEmail, job_position: 'Staff', department: null, manager_id: null })

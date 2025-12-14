@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { API_BASE } from '../lib/api';
 
 function buildTree(employees) {
   const map = new Map();
@@ -35,7 +36,7 @@ export default function OrgChartView() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch('http://localhost:5000/api/employees');
+        const res = await fetch(`${API_BASE}/employees`);
         const data = await res.json();
         setEmployees(data || []);
       } catch (err) {

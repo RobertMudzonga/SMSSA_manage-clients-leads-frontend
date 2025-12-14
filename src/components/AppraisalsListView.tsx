@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { API_BASE } from '../lib/api';
 
 export default function AppraisalsListView() {
   const [appraisals, setAppraisals] = useState<any[]>([]);
@@ -9,13 +10,13 @@ export default function AppraisalsListView() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch('http://localhost:5000/api/appraisals');
+        const res = await fetch(`${API_BASE}/appraisals`);
         const data = await res.json();
         setAppraisals(data || []);
         // build employees map from returned rows if present
         const empIds = Array.from(new Set((data || []).flatMap(a => [a.employee_id, a.reviewer_id]).filter(Boolean)));
         if (empIds.length) {
-          const resp = await fetch('http://localhost:5000/api/employees');
+          const resp = await fetch(`${API_BASE}/employees`);
           const emps = await resp.json();
           const map = {};
           emps.forEach(e => map[e.id] = e.full_name);

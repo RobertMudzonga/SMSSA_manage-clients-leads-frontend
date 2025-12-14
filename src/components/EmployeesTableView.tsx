@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { API_BASE } from '../lib/api';
 
 export default function EmployeesTableView() {
   const [employees, setEmployees] = useState<any[]>([]);
@@ -7,7 +8,7 @@ export default function EmployeesTableView() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch('http://localhost:5000/api/employees');
+        const res = await fetch(`${API_BASE}/employees`);
         const data = await res.json();
         setEmployees(data || []);
       } catch (err) {

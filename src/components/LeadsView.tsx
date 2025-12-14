@@ -5,8 +5,7 @@ import { Card } from './ui/card';
 import { Progress } from './ui/progress';
 import LeadDetailModal from './LeadDetailModal';
 
-// --- API CONFIGURATION ---
-const API_BASE_URL = 'http://localhost:5000/api';
+import { API_BASE } from '../lib/api';
 
 // --- STAGE DEFINITION FOR COLD LEADS ---
 // NOTE: These IDs are temporary client-side IDs for this component, 
@@ -103,7 +102,7 @@ export default function ColdLeadsKanbanApp() {
         setIsLoading(true);
         setError(null);
         try {
-            const response = await fetch(`${API_BASE_URL}/leads`);
+            const response = await fetch(`${API_BASE}/leads`);
             if (!response.ok) {
                 throw new Error('Failed to fetch leads');
             }
@@ -177,7 +176,7 @@ export default function ColdLeadsKanbanApp() {
 
         try {
             // Call the same PATCH endpoint used in the Prospect board, but with targetStageId = 1
-            const response = await fetch(`${API_BASE_URL}/leads/${leadId}/stage`, {
+            const response = await fetch(`${API_BASE}/leads/${leadId}/stage`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ stage_id: targetOpportunityStageId }),
@@ -210,7 +209,7 @@ export default function ColdLeadsKanbanApp() {
             const newStage = COLD_LEAD_STAGES[currentStageIndex + 1];
 
             try {
-                const response = await fetch(`${API_BASE_URL}/leads/${leadId}/stage`, {
+                const response = await fetch(`${API_BASE}/leads/${leadId}/stage`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ stage_id: newStage.id }),
@@ -237,7 +236,7 @@ export default function ColdLeadsKanbanApp() {
             const lead = leads.find(l => l.lead_id === leadId);
             const newNote = `${lead.notes || ''}\n[${new Date().toLocaleString()}] ${comment}`;
             
-            const response = await fetch(`${API_BASE_URL}/leads/${leadId}/comment`, {
+            const response = await fetch(`${API_BASE}/leads/${leadId}/comment`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ comment }),
@@ -259,7 +258,7 @@ export default function ColdLeadsKanbanApp() {
 
     const handleMarkLost = async (leadId, reason) => {
         try {
-            const response = await fetch(`${API_BASE_URL}/leads/${leadId}/lost`, {
+            const response = await fetch(`${API_BASE}/leads/${leadId}/lost`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ reason }),
@@ -279,7 +278,7 @@ export default function ColdLeadsKanbanApp() {
 
     const handleDeleteLead = async (leadId) => {
         try {
-            const response = await fetch(`${API_BASE_URL}/leads/${leadId}`, {
+            const response = await fetch(`${API_BASE}/leads/${leadId}`, {
                 method: 'DELETE',
             });
 
