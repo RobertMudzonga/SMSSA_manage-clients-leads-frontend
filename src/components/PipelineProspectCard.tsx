@@ -45,7 +45,7 @@ export default function PipelineProspectCard({
           {prospect.quote_amount && (
             <div className="flex items-center gap-2">
               <DollarSign className="w-3 h-3" />
-              <span className="font-medium">${prospect.quote_amount.toLocaleString()}</span>
+              <span className="font-medium">R{prospect.quote_amount.toLocaleString()}</span>
             </div>
           )}
           {prospect.next_follow_up_date && (

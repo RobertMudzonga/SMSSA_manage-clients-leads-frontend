@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
@@ -24,43 +23,58 @@ export default function DocumentChecklistView({ projectId, onClose }: DocumentCh
   }, [projectId]);
 
   const loadChecklist = async () => {
-    const { data: projectData } = await supabase
-      .from('projects')
-      .select('*')
-      .eq('id', projectId)
-      .single();
-    
-    const { data: checklistData } = await supabase
-      .from('document_checklists')
-      .select('*')
-      .eq('project_id', projectId)
-      .order('document_category');
-    
-    setProject(projectData);
-    setChecklist(checklistData || []);
+    setLoading(true);
+    try {
+      const projRes = await fetch(`/api/projects/${projectId}`);
+      const projJson = projRes.ok ? await projRes.json() : null;
+      const projectData = projJson ? projJson.project || projJson : null;
+
+      const res = await fetch(`/api/checklists/${projectId}`);
+      const json = await res.json();
+      const checklistData = json && json.ok ? json.checklist : [];
+
+      setProject(projectData);
+      setChecklist(checklistData || []);
+    } catch (err) {
+      console.error('Failed to load checklist via API:', err);
+      setChecklist([]);
+      setProject(null);
+    }
     setLoading(false);
   };
 
   const toggleReceived = async (id: string, currentStatus: boolean) => {
-    await supabase
-      .from('document_checklists')
-      .update({ 
-        is_received: !currentStatus,
-        received_date: !currentStatus ? new Date().toISOString() : null
-      })
-      .eq('id', id);
-    
+    try {
+      const storedEmail = window.localStorage.getItem('userEmail');
+      const headers: Record<string,string> = { 'Content-Type': 'application/json' };
+      if (storedEmail) headers['x-user-email'] = storedEmail;
+      const res = await fetch(`/api/checklists/${id}`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({ is_received: !currentStatus })
+      });
+      if (!res.ok) console.error('Toggle request failed', await res.text());
+    } catch (err) {
+      console.error('Toggle failed:', err);
+    }
     loadChecklist();
   };
 
   const sendReminder = async () => {
     const missingDocs = checklist.filter(item => !item.is_received && item.is_required);
-    
-    await supabase
-      .from('document_checklists')
-      .update({ reminder_sent_date: new Date().toISOString() })
-      .in('id', missingDocs.map(d => d.id));
-    
+    const storedEmail = window.localStorage.getItem('userEmail');
+    const headers: Record<string,string> = { 'Content-Type': 'application/json' };
+    if (storedEmail) headers['x-user-email'] = storedEmail;
+
+    for (const d of missingDocs) {
+      try {
+        const res = await fetch(`/api/checklists/${d.id}/notify`, { method: 'PATCH', headers });
+        if (!res.ok) console.error('Reminder failed for', d.id, await res.text());
+      } catch (err) {
+        console.error('Reminder error for', d.id, err);
+      }
+    }
+
     toast({ title: 'Reminder sent', description: `Reminder sent for ${missingDocs.length} missing documents` });
     loadChecklist();
   };

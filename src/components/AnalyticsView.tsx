@@ -5,7 +5,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CalendarIcon, Download, FileText, Mail } from 'lucide-react';
 import { format } from 'date-fns';
-import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { RevenueChart } from './RevenueChart';
 import { CompletionChart } from './CompletionChart';
@@ -26,14 +26,15 @@ export function AnalyticsView() {
   const fetchAnalytics = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('fetch-analytics-data', {
-        body: { 
-          startDate: startDate.toISOString(), 
-          endDate: endDate.toISOString() 
-        }
+      const { user } = useAuth();
+      const resp = await fetch('/api/functions/fetch-analytics-data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-user-email': user?.email || (localStorage.getItem('userEmail') || '') },
+        body: JSON.stringify({ startDate: startDate.toISOString(), endDate: endDate.toISOString() })
       });
-      if (error) throw error;
-      setAnalyticsData(data);
+      const json = await resp.json();
+      if (!resp.ok) throw new Error(json?.error || 'Failed to fetch analytics');
+      setAnalyticsData(json.data);
     } catch (error: any) {
       toast.error('Failed to fetch analytics');
     } finally {
@@ -43,10 +44,15 @@ export function AnalyticsView() {
 
   const exportPDF = async () => {
     try {
-      const { data } = await supabase.functions.invoke('generate-pdf-report', {
-        body: { analyticsData, startDate: format(startDate, 'yyyy-MM-dd'), endDate: format(endDate, 'yyyy-MM-dd') }
+      const { user } = useAuth();
+      const resp = await fetch('/api/functions/generate-pdf-report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-user-email': user?.email || (localStorage.getItem('userEmail') || '') },
+        body: JSON.stringify({ analyticsData, startDate: format(startDate, 'yyyy-MM-dd'), endDate: format(endDate, 'yyyy-MM-dd') })
       });
-      const blob = new Blob([data.html], { type: 'text/html' });
+      const json = await resp.json();
+      if (!resp.ok) throw new Error(json?.error || 'Failed to generate PDF');
+      const blob = new Blob([json.html], { type: 'text/html' });
       const url = URL.createObjectURL(blob);
       window.open(url);
       toast.success('PDF report generated');
@@ -57,10 +63,15 @@ export function AnalyticsView() {
 
   const exportExcel = async () => {
     try {
-      const { data } = await supabase.functions.invoke('export-excel-report', {
-        body: { startDate: startDate.toISOString(), endDate: endDate.toISOString() }
+      const { user } = useAuth();
+      const resp = await fetch('/api/functions/export-excel-report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-user-email': user?.email || (localStorage.getItem('userEmail') || '') },
+        body: JSON.stringify({ startDate: startDate.toISOString(), endDate: endDate.toISOString() })
       });
-      const csv = convertToCSV(data);
+      const json = await resp.json();
+      if (!resp.ok) throw new Error(json?.error || 'Failed to export Excel');
+      const csv = convertToCSV(json.data);
       downloadCSV(csv, 'analytics-report.csv');
       toast.success('Excel report exported');
     } catch (error) {

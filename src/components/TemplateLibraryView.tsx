@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
@@ -41,15 +40,10 @@ export default function TemplateLibraryView() {
 
   const loadTemplates = async () => {
     try {
-      const { data, error } = await supabase
-        .from('document_templates')
-        .select('*')
-        .eq('is_active', true)
-        .order('category', { ascending: true })
-        .order('name', { ascending: true });
-
-      if (error) throw error;
-      setTemplates(data || []);
+      const resp = await fetch('/api/templates');
+      const json = await resp.json();
+      if (!resp.ok) throw new Error(json?.error || 'Failed to load templates');
+      setTemplates(json.templates || []);
     } catch (error) {
       console.error('Error loading templates:', error);
       toast.error('Failed to load templates');
@@ -80,32 +74,34 @@ export default function TemplateLibraryView() {
   const handleSaveTemplate = async (template: any) => {
     try {
       if (template.id) {
-        const { error } = await supabase
-          .from('document_templates')
-          .update({
-            name: template.name,
-            description: template.description,
-            category: template.category,
-            content: template.content,
-            variables: template.variables,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', template.id);
-
-        if (error) throw error;
-        toast.success('Template updated successfully');
-      } else {
-        const { error } = await supabase
-          .from('document_templates')
-          .insert([{
+        const resp = await fetch(`/api/templates/${template.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
             name: template.name,
             description: template.description,
             category: template.category,
             content: template.content,
             variables: template.variables
-          }]);
-
-        if (error) throw error;
+          })
+        });
+        const json = await resp.json();
+        if (!resp.ok) throw new Error(json?.error || 'Failed to update template');
+        toast.success('Template updated successfully');
+      } else {
+        const resp = await fetch('/api/templates', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: template.name,
+            description: template.description,
+            category: template.category,
+            content: template.content,
+            variables: template.variables
+          })
+        });
+        const json = await resp.json();
+        if (!resp.ok) throw new Error(json?.error || 'Failed to create template');
         toast.success('Template created successfully');
       }
 
@@ -133,12 +129,9 @@ export default function TemplateLibraryView() {
     setDeletingTemplateId(null);
     if (!id) return;
     try {
-      const { error } = await supabase
-        .from('document_templates')
-        .update({ is_active: false })
-        .eq('id', id);
-
-      if (error) throw error;
+      const resp = await fetch(`/api/templates/${id}/deactivate`, { method: 'PATCH' });
+      const json = await resp.json();
+      if (!resp.ok) throw new Error(json?.error || 'Failed to delete template');
       toast.success('Template deleted successfully');
       loadTemplates();
     } catch (error) {
@@ -149,8 +142,9 @@ export default function TemplateLibraryView() {
 
   const seedTemplates = async () => {
     try {
-      const { error } = await supabase.functions.invoke('seed-document-templates');
-      if (error) throw error;
+      const resp = await fetch('/api/templates/seed', { method: 'POST' });
+      const json = await resp.json();
+      if (!resp.ok) throw new Error(json?.error || 'Failed to seed templates');
       toast.success('Sample templates added successfully');
       loadTemplates();
     } catch (error) {

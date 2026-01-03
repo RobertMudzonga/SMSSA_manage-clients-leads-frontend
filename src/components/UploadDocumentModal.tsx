@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
+import { CLIENT_UPLOADS_ENABLED } from '@/utils/documentSettings';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface UploadDocumentModalProps {
   isOpen: boolean;
@@ -18,8 +19,23 @@ export default function UploadDocumentModal({ isOpen, onClose, onSubmit, project
   });
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const { user } = useAuth();
 
   if (!isOpen) return null;
+
+  if (!CLIENT_UPLOADS_ENABLED) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg p-6 w-full max-w-md">
+          <h2 className="text-xl font-bold mb-4">Upload Disabled</h2>
+          <p className="text-sm text-gray-700 mb-4">Document uploads are currently disabled for clients. Project managers will manually mark received documents on the checklist.</p>
+          <div className="flex gap-2">
+            <button onClick={onClose} className="flex-1 px-4 py-2 bg-teal-600 text-white rounded-lg">Close</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,24 +46,30 @@ export default function UploadDocumentModal({ isOpen, onClose, onSubmit, project
 
     setUploading(true);
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-      
-      const { error: uploadError } = await supabase.storage
-        .from('client-documents')
-        .upload(fileName, file);
+      const fd = new FormData();
+      fd.append('file', file as File);
+      fd.append('project_id', String(projectId || ''));
+      fd.append('document_name', formData.document_name);
+      fd.append('document_type', formData.document_type);
+      fd.append('signature_required', String(formData.signature_required));
 
-      if (uploadError) throw uploadError;
+      const headers: Record<string,string> = {};
+      if (user && user.email) headers['x-user-email'] = user.email;
 
-      onSubmit({ 
-        ...formData, 
-        project_id: projectId,
-        file_path: fileName,
-        file_size: file.size,
-        file_type: file.type
-      });
-      setFormData({ document_name: '', document_type: 'Passport', signature_required: false });
-      setFile(null);
+      const res = await fetch('/api/documents/upload', { method: 'POST', body: fd, headers });
+      const ct = res.headers.get('content-type') || '';
+      let json: any = null;
+      if (ct.includes('application/json')) json = await res.json(); else { const t = await res.text(); try { json = JSON.parse(t); } catch { json = { error: t }; } }
+
+      if (!res.ok) {
+        console.error('Upload failed', json);
+        toast({ title: 'Upload failed', description: json?.error || 'Server error', variant: 'destructive' });
+      } else {
+        // backend returns created document
+        onSubmit(json.document || json);
+        setFormData({ document_name: '', document_type: 'Passport', signature_required: false });
+        setFile(null);
+      }
     } catch (error) {
       console.error('Upload error:', error);
       toast({ title: 'Upload failed', description: 'Failed to upload file', variant: 'destructive' });

@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/contexts/AuthContext';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
 import { Progress } from './ui/progress';
 import { AlertCircle, CheckCircle2, Upload } from 'lucide-react';
 import DocumentUploadZone from './DocumentUploadZone';
+import { CLIENT_UPLOADS_ENABLED } from '@/utils/documentSettings';
+import { useToast } from '@/hooks/use-toast';
 
 interface ClientDocumentUploadViewProps {
   projectId: string;
@@ -19,26 +21,30 @@ export default function ClientDocumentUploadView({
   const [project, setProject] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
+  const { user } = useAuth();
+  const { toast } = useToast();
 
   useEffect(() => {
     loadData();
   }, [projectId]);
 
   const loadData = async () => {
-    const { data: projectData } = await supabase
-      .from('projects')
-      .select('*')
-      .eq('id', projectId)
-      .single();
-    
-    const { data: checklistData } = await supabase
-      .from('document_checklists')
-      .select('*')
-      .eq('project_id', projectId)
-      .order('document_category');
-    
-    setProject(projectData);
-    setChecklist(checklistData || []);
+    try {
+      const projRes = await fetch(`/api/projects/${projectId}`);
+      const projJson = projRes.ok ? await projRes.json() : null;
+      const projectData = projJson ? projJson.project || projJson : null;
+
+      const res = await fetch(`/api/checklists/${projectId}`);
+      const json = await res.json().catch(() => null);
+      const checklistData = json && json.ok ? json.checklist : [];
+
+      setProject(projectData);
+      setChecklist(checklistData || []);
+    } catch (err) {
+      console.error('Failed to load client portal data via API:', err);
+      setProject(null);
+      setChecklist([]);
+    }
     setLoading(false);
   };
 
@@ -109,8 +115,7 @@ export default function ClientDocumentUploadView({
                   {items.map(item => (
                     <div key={item.id}>
                       <div 
-                        className="flex items-center justify-between p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100"
-                        onClick={() => !item.is_received && toggleExpanded(item.id)}
+                        className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
                       >
                         <div className="flex items-center gap-3 flex-1">
                           {item.is_received ? (
@@ -131,15 +136,38 @@ export default function ClientDocumentUploadView({
                           </Badge>
                         )}
                       </div>
-                      
-                      {expandedItems.has(item.id) && !item.is_received && (
+
+                      {!item.is_received && (
                         <div className="mt-3">
-                          <DocumentUploadZone
-                            projectId={projectId}
-                            checklistItemId={item.id}
-                            documentName={item.document_name}
-                            onUploadSuccess={loadData}
-                          />
+                          {CLIENT_UPLOADS_ENABLED ? (
+                            <DocumentUploadZone
+                              projectId={projectId}
+                              checklistItemId={item.id}
+                              documentName={item.document_name}
+                              onUploadSuccess={loadData}
+                            />
+                          ) : (
+                            <div className="p-4 bg-gray-50 rounded-lg">
+                              <div className="flex items-center justify-between">
+                                <div className="text-sm text-gray-700">Uploads are disabled. Please submit the document to your project manager offline.</div>
+                                <button className="px-3 py-1 bg-teal-600 text-white rounded" onClick={async () => {
+                                  try {
+                                    const headers: Record<string,string> = { 'Content-Type': 'application/json' };
+                                    if (user && user.email) headers['x-user-email'] = user.email;
+                                    const res = await fetch(`/api/checklists/${item.id}/notify`, { method: 'PATCH', headers, body: JSON.stringify({}) });
+                                    const ct = res.headers.get('content-type') || '';
+                                    let json: any = null;
+                                    if (ct.includes('application/json')) json = await res.json(); else { const t = await res.text(); try { json = JSON.parse(t); } catch { json = { error: t }; } }
+                                    if (!res.ok) throw new Error(json?.error || `Notify failed: ${res.status}`);
+                                    toast({ title: 'Project manager notified', description: 'A reminder has been sent.' });
+                                  } catch (err) {
+                                    console.error(err);
+                                    toast({ title: 'Notification failed', variant: 'destructive' });
+                                  }
+                                }}>Notify PM</button>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>

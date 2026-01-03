@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { supabase } from '@/lib/supabase';
+import { API_BASE } from '@/lib/api';
 import ClientDocumentUploadView from '@/components/ClientDocumentUploadView';
 import { AlertCircle, Loader2 } from 'lucide-react';
 
@@ -24,47 +24,14 @@ export default function ClientPortal() {
     }
 
     try {
-      // Validate token
-      const { data: accessData, error: accessError } = await supabase
-        .from('client_portal_access')
-        .select('*')
-        .eq('access_token', token)
-        .eq('is_active', true)
-        .single();
-
-      if (accessError || !accessData) {
-        setError('Invalid or expired access link.');
+      const resp = await fetch(`${API_BASE}/client-portal/validate?token=${encodeURIComponent(token)}`);
+      const json = await resp.json().catch(() => null);
+      if (!resp.ok) {
+        setError(json?.error === 'expired' ? 'This access link has expired. Please contact your consultant for a new link.' : 'Invalid or expired access link.');
         setLoading(false);
         return;
       }
-
-      // Check expiry
-      if (new Date(accessData.expires_at) < new Date()) {
-        setError('This access link has expired. Please contact your consultant for a new link.');
-        setLoading(false);
-        return;
-      }
-
-      // Update last accessed
-      await supabase
-        .from('client_portal_access')
-        .update({ last_accessed_at: new Date().toISOString() })
-        .eq('id', accessData.id);
-
-      // Load project
-      const { data: project, error: projectError } = await supabase
-        .from('projects')
-        .select('*')
-        .eq('id', accessData.project_id)
-        .single();
-
-      if (projectError || !project) {
-        setError('Unable to load your case information.');
-        setLoading(false);
-        return;
-      }
-
-      setProjectData(project);
+      setProjectData(json.project || null);
       setLoading(false);
     } catch (err) {
       setError('An error occurred. Please try again later.');

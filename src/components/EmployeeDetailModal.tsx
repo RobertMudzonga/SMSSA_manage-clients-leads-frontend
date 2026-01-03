@@ -112,7 +112,7 @@ export function EmployeeDetailModal({ employee, metrics, goals, reviews, open, o
                   <DollarSign className="w-4 h-4 text-purple-600" />
                   <span className="text-sm text-gray-500">Revenue</span>
                 </div>
-                <p className="text-2xl font-bold">${metrics?.revenue_generated?.toLocaleString() || 0}</p>
+                <p className="text-2xl font-bold">R{metrics?.revenue_generated?.toLocaleString() || 0}</p>
               </Card>
               
               <Card className="p-4">

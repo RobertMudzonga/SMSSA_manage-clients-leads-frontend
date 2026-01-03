@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { API_BASE } from '@/lib/api';
 
 interface AuthContextValue {
   user: any | null;
@@ -32,42 +32,44 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { error: { message: 'Email domain not allowed' } };
     }
 
-    const resp = await supabase.auth.signInWithPassword({ email, password });
-    if (resp.error) return { error: resp.error };
-    // supabase returns session with user
-    setUser(resp.data.user || null);
-    return {};
+    try {
+      const r = await fetch(`${API_BASE}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      const json = await r.json().catch(() => null);
+      if (!r.ok) return { error: json || { message: 'Login failed' } };
+      setUser(json.user || null);
+      try { localStorage.setItem('smssa_user', JSON.stringify(json.user || null)); localStorage.setItem('userEmail', json.user?.email || email); } catch (e) {}
+      return {};
+    } catch (err) {
+      return { error: err };
+    }
   };
 
   const logout = async () => {
-    await supabase.auth.signOut();
+    try {
+      await fetch(`${API_BASE}/auth/logout`, { method: 'POST' }).catch(() => {});
+    } catch (e) {}
     setUser(null);
+    try { localStorage.removeItem('smssa_user'); localStorage.removeItem('userEmail'); } catch (e) {}
   };
 
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
-        const { data } = await supabase.auth.getSession();
-        if (!mounted) return;
-        setUser(data?.session?.user ?? null);
+        // Read persisted user from localStorage if present
+        const s = localStorage.getItem('smssa_user');
+        if (s) setUser(JSON.parse(s));
       } finally {
         if (mounted) setLoading(false);
       }
     })();
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
-
     return () => {
       mounted = false;
-      // unsubscribe if possible
-      // @ts-ignore
-      if (listener && listener.subscription && typeof listener.subscription.unsubscribe === 'function') {
-        // @ts-ignore
-        listener.subscription.unsubscribe();
-      }
     };
   }, []);
 

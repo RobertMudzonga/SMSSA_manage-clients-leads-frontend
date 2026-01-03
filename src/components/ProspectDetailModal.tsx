@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { formatForDateInput } from '@/utils/formatDate';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { X, Calendar, DollarSign, Tag } from 'lucide-react';
@@ -37,11 +38,11 @@ export default function ProspectDetailModal({
   const [salesperson, setSalesperson] = useState(prospect?.assigned_to || '');
   const [employeesList, setEmployeesList] = useState<any[]>([]);
   const [employeesError, setEmployeesError] = useState<string | null>(null);
-  const [quoteDate, setQuoteDate] = useState(prospect?.quote_sent_date || '');
+  const [quoteDate, setQuoteDate] = useState(formatForDateInput(prospect?.quote_sent_date || ''));
   const [dealValue, setDealValue] = useState(prospect?.quote_amount || '');
   const [professionalFees, setProfessionalFees] = useState(prospect?.professional_fees || '');
   const [depositAmount, setDepositAmount] = useState(prospect?.deposit_amount || '');
-  const [expectedClosingDate, setExpectedClosingDate] = useState(prospect?.expected_closing_date || '');
+  const [expectedClosingDate, setExpectedClosingDate] = useState(formatForDateInput(prospect?.expected_closing_date || ''));
   const [availableTags, setAvailableTags] = useState<any[]>([]);
   const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
   const { toast } = useToast();
@@ -56,11 +57,11 @@ export default function ProspectDetailModal({
     setPhone(prospect?.phone || '');
     setSource(prospect?.lead_source || prospect?.source || '');
     setSalesperson(prospect?.assigned_to || '');
-    setQuoteDate(prospect?.quote_sent_date || '');
+    setQuoteDate(formatForDateInput(prospect?.quote_sent_date || ''));
     setDealValue(prospect?.quote_amount || '');
     setProfessionalFees(prospect?.professional_fees || '');
     setDepositAmount(prospect?.deposit_amount || '');
-    setExpectedClosingDate(prospect?.expected_closing_date || '');
+    setExpectedClosingDate(formatForDateInput(prospect?.expected_closing_date || ''));
     setNotes(prospect?.notes || '');
     // fetch available tags and selected tags
     (async () => {

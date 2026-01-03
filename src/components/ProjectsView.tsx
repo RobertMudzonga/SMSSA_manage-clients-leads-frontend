@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { useToast } from '@/hooks/use-toast';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import ProjectCard from './ProjectCard';
 import CreateProjectModal from './CreateProjectModal';
 import GanttChart from './GanttChart';
@@ -14,17 +16,60 @@ interface ProjectsViewProps {
 }
 
 export default function ProjectsView({ projects, onCreateProject, onProjectClick, onRefresh }: ProjectsViewProps) {
+  const { toast } = useToast();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [viewMode, setViewMode] = useState<'grid' | 'gantt' | 'kanban'>('grid');
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [importPreviewOpen, setImportPreviewOpen] = useState(false);
+  const [importPreviewRows, setImportPreviewRows] = useState<any[]>([]);
+  const [importingFile, setImportingFile] = useState<File | null>(null);
 
 
-  const filteredProjects = projects.filter(p => {
-    const matchesSearch = p.project_name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = filterStatus === 'all' || p.status === filterStatus;
+  const safeProjects = Array.isArray(projects) ? projects : [];
+
+  // Listen for stage-updated events and trigger a refresh if provided
+  useEffect(() => {
+    const handler = (e: any) => {
+      try {
+        if (typeof onRefresh === 'function') onRefresh();
+      } catch (err) {}
+    };
+    window.addEventListener('project:stage-updated', handler);
+    const delHandler = (e: any) => {
+      try { if (typeof onRefresh === 'function') onRefresh(); } catch (err) {}
+    };
+    window.addEventListener('project:deleted', delHandler);
+    return () => {
+      window.removeEventListener('project:stage-updated', handler);
+      window.removeEventListener('project:deleted', delHandler);
+    };
+  }, [onRefresh]);
+
+  const filteredProjects = safeProjects.filter(p => {
+    const name = (p && (p.project_name || p.name || ''));
+    const status = (p && (p.status || '')).toString();
+    const matchesSearch = name.toLowerCase().includes((searchTerm || '').toLowerCase());
+    const matchesStatus = filterStatus === 'all' || status.toLowerCase() === filterStatus.toLowerCase();
     return matchesSearch && matchesStatus;
   });
+
+  function exportToCsv(filename: string, rows: any[]) {
+    if (!rows || rows.length === 0) {
+      toast({ title: 'No data to export' });
+      return;
+    }
+    const keys = Object.keys(rows[0]);
+    const csv = [keys.join(',')].concat(rows.map(r => keys.map(k => `"${(r[k] ?? '').toString().replace(/"/g,'""')}"`).join(','))).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  }
 
   return (
     <div className="space-y-6">
@@ -53,12 +98,68 @@ export default function ProjectsView({ projects, onCreateProject, onProjectClick
               <span className="text-sm">Kanban</span>
             </button>
           </div>
-          <button 
-            onClick={() => setIsModalOpen(true)}
-            className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700"
-          >
-            Create Project
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => exportToCsv('projects.csv', projects)}
+              className="px-3 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300"
+            >
+              Export
+            </button>
+            <input
+              type="file"
+              accept=".xlsx,.xls,.csv"
+              style={{ display: 'none' }}
+              ref={fileInputRef}
+              onChange={async (e) => {
+                const f = e.target.files?.[0];
+                if (!f) return;
+                setImportingFile(f);
+                const fd = new FormData();
+                fd.append('file', f);
+                fd.append('target', 'projects');
+                fd.append('dryRun', 'true');
+                try {
+                  const res = await fetch('/api/import', { method: 'POST', body: fd });
+                  let json;
+                  const ct = res.headers.get('content-type') || '';
+                  if (ct.includes('application/json')) {
+                    json = await res.json();
+                  } else {
+                    const txt = await res.text();
+                    try { json = JSON.parse(txt); } catch { json = { error: txt }; }
+                  }
+                  if (res.ok && json && json.result && json.result.mappedRows) {
+                    const sheetKeys = Object.keys(json.result.mappedRows);
+                    if (sheetKeys.length > 0) {
+                      const mapped = json.result.mappedRows[sheetKeys[0]].projects || [];
+                      setImportPreviewRows(mapped || []);
+                      setImportPreviewOpen(true);
+                    } else {
+                      toast({ title: 'No mapped rows returned', variant: 'destructive' });
+                    }
+                  } else {
+                    toast({ title: 'Dry-run failed', description: json.error || 'Server error', variant: 'destructive' });
+                  }
+                } catch (err) {
+                  console.error(err);
+                  toast({ title: 'Dry-run failed', variant: 'destructive' });
+                }
+                (e.target as HTMLInputElement).value = '';
+              }}
+            />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="px-3 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300"
+            >
+              Import
+            </button>
+            <button 
+              onClick={() => setIsModalOpen(true)}
+              className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700"
+            >
+              Create Project
+            </button>
+          </div>
         </div>
       </div>
 
@@ -86,13 +187,16 @@ export default function ProjectsView({ projects, onCreateProject, onProjectClick
 
       {viewMode === 'grid' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredProjects.map(project => (
-            <ProjectCard 
-              key={project.id} 
-              project={project}
-              onClick={() => onProjectClick(project.id)}
-            />
-          ))}
+          {filteredProjects.map((project, idx) => {
+            const id = project?.project_id || project?.id || project?.projectId || `project-${idx}`;
+            return (
+              <ProjectCard 
+                key={id}
+                project={project}
+                onClick={() => onProjectClick(id)}
+              />
+            );
+          })}
         </div>
       ) : viewMode === 'gantt' ? (
         <GanttChart projects={filteredProjects} />
@@ -109,6 +213,75 @@ export default function ProjectsView({ projects, onCreateProject, onProjectClick
           setIsModalOpen(false);
         }}
       />
+      
+      <Dialog open={importPreviewOpen} onOpenChange={setImportPreviewOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Import Preview</DialogTitle>
+            <DialogDescription>Preview of mapped rows (first 50). Confirm to run actual import.</DialogDescription>
+          </DialogHeader>
+          <div className="mt-4 max-h-80 overflow-auto">
+            {importPreviewRows.length === 0 ? (
+              <div className="text-sm text-gray-600">No rows to preview.</div>
+            ) : (
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr>
+                    {Object.keys(importPreviewRows[0]).map(k => (
+                      <th key={k} className="px-2 py-1 text-left font-medium text-gray-600">{k}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {importPreviewRows.slice(0,50).map((r, i) => (
+                    <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                      {Object.keys(importPreviewRows[0]).map(k => (
+                        <td key={k} className="px-2 py-1">{String(r[k] ?? '')}</td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+          <DialogFooter>
+            <div className="flex gap-2 justify-end">
+              <button className="px-3 py-1 rounded bg-gray-100" onClick={() => { setImportPreviewOpen(false); setImportPreviewRows([]); setImportingFile(null); }}>Cancel</button>
+              <button className="px-3 py-1 rounded bg-teal-600 text-white" onClick={async () => {
+                if (!importingFile) return;
+                const fd = new FormData();
+                fd.append('file', importingFile);
+                fd.append('target', 'projects');
+                try {
+                  const res = await fetch('/api/import', { method: 'POST', body: fd });
+                  let json;
+                  const ct = res.headers.get('content-type') || '';
+                  if (ct.includes('application/json')) {
+                    json = await res.json();
+                  } else {
+                    const txt = await res.text();
+                    try { json = JSON.parse(txt); } catch { json = { error: txt }; }
+                  }
+                  if (res.ok) {
+                    toast({ title: 'Import complete', description: JSON.stringify(json.result) });
+                    setImportPreviewOpen(false);
+                    setImportPreviewRows([]);
+                    setImportingFile(null);
+                    if (typeof onRefresh === 'function') onRefresh();
+                  } else {
+                    toast({ title: 'Import failed', description: json.error || 'Server error', variant: 'destructive' });
+                  }
+                } catch (err) {
+                  console.error(err);
+                  toast({ title: 'Import failed', variant: 'destructive' });
+                }
+              }}>Confirm Import</button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
     </div>
   );
 }
+

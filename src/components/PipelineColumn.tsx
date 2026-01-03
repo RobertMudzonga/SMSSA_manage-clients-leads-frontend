@@ -36,7 +36,7 @@ export default function PipelineColumn({
           </span>
           {totalValue > 0 && (
             <span className="text-sm text-gray-600">
-              ${totalValue.toLocaleString()}
+              R{totalValue.toLocaleString()}
             </span>
           )}
         </div>

@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -26,9 +25,10 @@ export default function DatabaseHealthDashboard() {
   const runHealthCheck = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('database-health-check');
-      if (error) throw error;
-      setHealthData(data);
+      const resp = await fetch('/api/functions/database-health-check', { method: 'POST' });
+      const json = await resp.json();
+      if (!resp.ok) throw new Error(json?.error || 'Health check failed');
+      setHealthData(json.data);
     } catch (error) {
       console.error('Health check failed:', error);
     } finally {
@@ -72,16 +72,14 @@ export default function DatabaseHealthDashboard() {
           };
         });
 
-      const { data, error } = await supabase.functions.invoke('apply-database-migrations', {
-        body: { migrations }
+      const resp = await fetch('/api/functions/apply-database-migrations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ migrations })
       });
-      
-      if (error) throw error;
-      
-      // Show success message
-      console.log('Migrations applied:', data);
-      
-      // Re-run health check after a short delay
+      const json = await resp.json();
+      if (!resp.ok) throw new Error(json?.error || 'Migration failed');
+      console.log('Migrations applied:', json);
       setTimeout(() => runHealthCheck(), 1000);
     } catch (error) {
       console.error('Migration failed:', error);

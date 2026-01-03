@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 interface CreateProjectModalProps {
   isOpen: boolean;
@@ -18,7 +18,52 @@ export default function CreateProjectModal({ isOpen, onClose, onSubmit, clientId
     payment_amount: ''
   });
 
+  function formatForDateInput(value: string | Date | null) {
+    if (!value) return '';
+    const d = (value instanceof Date) ? value : new Date(value);
+    if (isNaN(d.getTime())) return '';
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  }
+  useEffect(() => {
+    // Only prefill when modal is open and a clientId is provided
+    if (!isOpen || !clientId) return;
 
+    (async () => {
+      try {
+        // Try prospects endpoint first (may return professional_fees and deposit_amount)
+        let res = await fetch('/api/prospects');
+        if (res.ok) {
+          const prospects = await res.json();
+          const match = prospects.find((p: any) => String(p.prospect_id || p.id || p.prospectId) === String(clientId) || String(p.lead_id) === String(clientId));
+          if (match) {
+            const professionalFees = parseFloat(match.professional_fees || match.professionalFees || 0) || 0;
+            const deposit = parseFloat(match.deposit_amount || match.depositAmount || 0) || 0;
+            const remaining = Math.max(0, professionalFees - deposit);
+            setFormData(fd => ({ ...fd, client_name: match.name || `${match.first_name || ''} ${match.last_name || ''}`.trim(), client_email: match.email || '', payment_amount: remaining ? String(remaining) : fd.payment_amount, start_date: fd.start_date || new Date().toISOString().split('T')[0] }));
+            return;
+          }
+        }
+
+        // Fall back to leads endpoint
+        res = await fetch(`/api/leads`);
+        if (res.ok) {
+          const leads = await res.json();
+          const matchLead = leads.find((l: any) => String(l.lead_id || l.id) === String(clientId));
+          if (matchLead) {
+            setFormData(fd => ({ ...fd, client_name: `${matchLead.first_name || ''} ${matchLead.last_name || ''}`.trim(), client_email: matchLead.email || '', start_date: fd.start_date || new Date().toISOString().split('T')[0] }));
+          }
+        }
+      } catch (err) {
+        // ignore prefill errors
+        console.warn('Prefill project modal failed:', err);
+      }
+    })();
+  }, [clientId, isOpen]);
+
+  // Keep hooks stable; only conditionally render after hooks are declared.
   if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -59,8 +104,8 @@ export default function CreateProjectModal({ isOpen, onClose, onSubmit, clientId
           <input
             type="date"
             placeholder="Start Date"
-            value={formData.start_date}
-            onChange={(e) => setFormData({...formData, start_date: e.target.value})}
+            value={formatForDateInput(formData.start_date)}
+            onChange={(e) => setFormData({...formData, start_date: e.target.value ? formatForDateInput(e.target.value) : ''})}
             className="w-full px-3 py-2 border rounded-lg"
           />
           <input

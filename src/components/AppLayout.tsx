@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import Sidebar from './Sidebar';
@@ -49,9 +48,15 @@ export default function AppLayout() {
       console.error('Error fetching prospects:', error);
       setProspects([]);
     }
-
-    const { data: projectsData } = await supabase.from('projects').select('*').order('created_at', { ascending: false });
-    const { data: documentsData } = await supabase.from('documents').select('*').order('created_at', { ascending: false });
+    // Fetch projects via backend
+    let projectsData = [];
+    try {
+      const r = await fetch(`${API_BASE}/projects`);
+      projectsData = r.ok ? await r.json() : [];
+    } catch (err) {
+      console.error('Error fetching projects from backend:', err);
+      projectsData = [];
+    }
     let employeesData = [];
     try {
       const resp = await fetch(`${API_BASE}/employees`);
@@ -70,16 +75,13 @@ export default function AppLayout() {
       setEmployeesLoadError(String(err));
       employeesData = [];
     }
-    const { data: metricsData } = await supabase.from('performance_metrics').select('*');
-    const { data: goalsData } = await supabase.from('employee_goals').select('*');
-    const { data: reviewsData } = await supabase.from('performance_reviews').select('*');
-    
+    // For now, metrics/goals/reviews are loaded later or empty
     setProjects(projectsData || []);
-    setDocuments(documentsData || []);
+    setDocuments([]);
     setEmployees(employeesData || []);
-    setMetrics(metricsData || []);
-    setGoals(goalsData || []);
-    setReviews(reviewsData || []);
+    setMetrics([]);
+    setGoals([]);
+    setReviews([]);
   };
 
   const handleAddProspect = async (data: any) => {
@@ -136,16 +138,16 @@ export default function AppLayout() {
       return { error: { message: 'Only admins may delete employees' } };
     }
     try {
-      // Prefer soft-delete to avoid direct REST delete edge-cases
-      const { data, error } = await supabase.from('employees').update({ is_active: false }).eq('id', id).select();
-      if (!error) {
-        loadData();
+      const resp = await fetch(`${API_BASE}/employees/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ is_active: false }) });
+      if (resp.ok) {
+        await loadData();
         toast({ title: 'Employee removed' });
         return { ok: true };
       }
-      console.error('Failed to delete employee:', error);
-      toast({ title: 'Failed to delete employee', description: error?.message || JSON.stringify(error), variant: 'destructive' });
-      return { error };
+      const err = await resp.json().catch(() => null);
+      console.error('Failed to delete employee:', err);
+      toast({ title: 'Failed to delete employee', description: err?.error || 'Unknown', variant: 'destructive' });
+      return { error: err };
     } catch (err) {
       console.error('Error deleting employee:', err);
       toast({ title: 'Failed to delete employee', description: String(err), variant: 'destructive' });
@@ -266,13 +268,13 @@ export default function AppLayout() {
 
   const handleScheduleFollowUp = async (prospectId: string, type: string, date: string) => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-
-      await supabase.functions.invoke('schedule-follow-up', {
-        body: { prospectId, followUpType: type, scheduledDate: date }
+      const storedEmail = window.localStorage.getItem('userEmail') || '';
+      const res = await fetch(`${API_BASE}/prospects/${prospectId}/followup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-user-email': storedEmail },
+        body: JSON.stringify({ followUpType: type, scheduledDate: date })
       });
-      
+      if (!res.ok) console.error('Schedule follow-up failed', await res.text());
       loadData();
     } catch (error) {
       console.error('Error scheduling follow-up:', error);
@@ -280,47 +282,58 @@ export default function AppLayout() {
   };
 
   const handleCreateProject = async (data: any) => {
-    const { data: projectData, error } = await supabase
-      .from('projects')
-      .insert([{ 
-        project_name: data.project_name,
-        client_name: data.client_name,
-        client_email: data.client_email,
-        case_type: data.case_type,
-        priority: data.priority,
-        start_date: data.start_date,
-        payment_amount: data.payment_amount,
-        client_id: data.client_id,
-        status: 'active', 
-        progress: 0 
-      }])
-      .select()
-      .single();
-    
-    if (!error && projectData) {
-      await supabase.functions.invoke('generate-document-checklist', {
-        body: { 
-          projectId: projectData.id, 
-          visaType: projectData.case_type,
-          clientEmail: projectData.client_email,
-          clientName: projectData.client_name
-        }
+    try {
+      const storedEmail = window.localStorage.getItem('userEmail') || '';
+      const res = await fetch(`${API_BASE}/projects/create`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-user-email': storedEmail },
+        body: JSON.stringify(data)
       });
+      if (!res.ok) {
+        const txt = await res.text().catch(() => 'failed');
+        console.error('Create project failed', res.status, txt);
+        toast({ title: 'Failed to create project', description: txt, variant: 'destructive' });
+        return;
+      }
       loadData();
-    } else {
-      console.error('Error creating project:', error);
-      toast({ title: 'Failed to create project', description: (error?.message || 'Unknown error'), variant: 'destructive' });
+    } catch (err) {
+      console.error('Error creating project via backend:', err);
+      toast({ title: 'Failed to create project', description: String(err), variant: 'destructive' });
     }
   };
 
   const handleUploadDocument = async (data: any) => {
-    const { error } = await supabase.from('documents').insert([{ 
-      ...data, 
-      file_url: 'placeholder-url',
-      status: 'pending',
-      file_size: 0
-    }]);
-    if (!error) loadData();
+    // If the upload endpoint already returned a created document, accept it
+    if (data && (data.document_id || data.id)) {
+      await loadData();
+      return data;
+    }
+
+    // Otherwise fallback to creating a document record via backend API
+    try {
+      const payload = {
+        document_name: data.document_name,
+        document_type: data.document_type,
+        project_id: data.project_id ?? null,
+        signature_required: data.signature_required ?? false,
+        file_url: data.file_path || data.file_url || null,
+        file_size: data.file_size ?? 0,
+        file_type: data.file_type || null,
+        status: 'pending'
+      };
+      const storedEmail = window.localStorage.getItem('userEmail');
+      const headers: Record<string,string> = { 'Content-Type': 'application/json' };
+      if (storedEmail) headers['x-user-email'] = storedEmail;
+      const res = await fetch('/api/documents/record', { method: 'POST', headers, body: JSON.stringify(payload) });
+      const ct = res.headers.get('content-type') || '';
+      let json: any = null;
+      if (ct.includes('application/json')) json = await res.json(); else { const t = await res.text(); try { json = JSON.parse(t); } catch { json = { error: t }; } }
+      if (!res.ok) return { error: json || 'failed' };
+      await loadData();
+      return json;
+    } catch (err) {
+      return { error: err };
+    }
   };
 
   const handleAddEmployee = async (data?: { full_name: string; work_email: string; job_position?: string; department?: string | null; manager_id?: number | null }) => {
@@ -383,11 +396,13 @@ export default function AppLayout() {
       const today = new Date();
       const periodStart = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
       const periodEnd = today.toISOString().split('T')[0];
-
-      await supabase.functions.invoke('calculate-employee-metrics', {
-        body: { employeeId, periodStart, periodEnd }
+      const storedEmail = window.localStorage.getItem('userEmail') || '';
+      const res = await fetch(`${API_BASE}/employees/${employeeId}/metrics`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-user-email': storedEmail },
+        body: JSON.stringify({ periodStart, periodEnd })
       });
-      
+      if (!res.ok) console.error('Calculate metrics failed', await res.text());
       loadData();
     } catch (error) {
       console.error('Error calculating metrics:', error);
@@ -396,7 +411,10 @@ export default function AppLayout() {
 
   const stats = {
     totalProspects: prospects.length,
-    activeProjects: projects.filter(p => p.status === 'active').length,
+    activeProjects: projects.filter(p => {
+      const s = (p && p.status) ? p.status.toString().toLowerCase() : '';
+      return s !== 'completed' && s !== 'complete';
+    }).length,
     pendingDocuments: documents.filter(d => d.status === 'pending').length,
     revenue: projects.reduce((sum, p) => sum + (parseFloat(p.payment_amount) || 0), 0)
   };

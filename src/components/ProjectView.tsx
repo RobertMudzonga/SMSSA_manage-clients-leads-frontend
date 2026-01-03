@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { formatForDateInput } from '@/utils/formatDate';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
@@ -40,47 +40,116 @@ export default function ProjectView({ projectId, onClose }: ProjectViewProps) {
 
   const loadProject = async () => {
     setLoading(true);
-    const { data } = await supabase.from('projects').select('*').eq('id', projectId).single();
-    if (data) {
-      setProject(data);
-      setStage(data.stage || 1);
-      setSubmissionStatus(data.submission_status || 'on-hold');
+    try {
+      const res = await fetch(`/api/projects/${projectId}`);
+      if (!res.ok) {
+        console.error('Failed to load project', res.status, await res.text());
+        setLoading(false);
+        return;
+      }
+      const json = await res.json();
+      const proj = json && json.project ? json.project : json;
+      setProject(proj);
+      setStage(proj.stage || proj.current_stage || 1);
+      setSubmissionStatus(proj.submission_status || 'on-hold');
       setSubmissionDetails({
-        submission_type: data.submission_type || 'mobile',
-        submission_center: data.submission_center || '',
-        submission_date: data.submission_date || '',
-        visa_ref: data.visa_ref || '',
-        vfs_receipt: data.vfs_receipt || '',
-        receipt_number: data.receipt_number || ''
+        submission_type: proj.submission_type || proj.tracking_submission_type || 'mobile',
+        submission_center: proj.submission_center || proj.tracking_submission_center || '',
+        submission_date: formatForDateInput(proj.submission_date || proj.tracking_date || ''),
+        visa_ref: proj.visa_ref || proj.tracking_visa_ref || '',
+        vfs_receipt: proj.vfs_receipt || proj.tracking_vfs_receipt || '',
+        receipt_number: proj.receipt_number || proj.tracking_receipt_number || ''
       });
+    } catch (err) {
+      console.error('Failed to load project', err);
     }
     setLoading(false);
   };
 
   const updateProjectStage = async (nextStage: number) => {
-    await supabase.from('projects').update({ stage: nextStage }).eq('id', projectId);
-    setStage(nextStage);
-    loadProject();
+    try {
+      const storedEmail = window.localStorage.getItem('userEmail');
+      const headers: Record<string,string> = { 'Content-Type': 'application/json' };
+      if (storedEmail) headers['x-user-email'] = storedEmail;
+      const res = await fetch(`/api/projects/${projectId}/stage`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({ current_stage: nextStage })
+      });
+      if (!res.ok) {
+        const txt = await res.text();
+        console.error('Stage update failed', res.status, txt);
+        toast({ title: 'Unable to update stage', description: 'Server error when updating project stage', variant: 'destructive' });
+        return;
+      }
+      const json = await res.json();
+      const updated = json || {};
+      setStage(nextStage);
+      loadProject();
+      try {
+        window.dispatchEvent(new CustomEvent('project:stage-updated', { detail: { projectId, stage: nextStage } }));
+      } catch (e) {}
+
+      // Compute progress based on the project's 6 tasks.
+      try {
+        const completedTasks = (nextStage === 6) ? 6 : Math.max(0, nextStage - 1);
+        const progressPercent = Math.round((completedTasks / 6) * 100);
+        // Send a quick update to set progress column
+        const storedEmail = window.localStorage.getItem('userEmail');
+        const headers: Record<string,string> = { 'Content-Type': 'application/json' };
+        if (storedEmail) headers['x-user-email'] = storedEmail;
+        await fetch(`/api/projects/${projectId}/stage`, { method: 'PATCH', headers, body: JSON.stringify({ progress: progressPercent }) });
+      } catch (err) {
+        // non-fatal; progress update best-effort
+        console.warn('Failed to update progress:', err);
+      }
+
+      return updated;
+    } catch (err) {
+      console.error('Failed to update stage', err);
+      toast({ title: 'Unable to update stage', description: String(err), variant: 'destructive' });
+    }
   };
 
   // Document checklist completion check
   const isChecklistComplete = async () => {
-    const { data: checklist } = await supabase
-      .from('document_checklists')
-      .select('*')
-      .eq('project_id', projectId);
-
-    if (!checklist) return false;
-    const required = checklist.filter((c: any) => c.is_required !== false);
-    return required.length === 0 || required.every((c: any) => c.is_received === true);
+    try {
+      const res = await fetch(`/api/checklists/${projectId}`);
+      if (!res.ok) {
+        console.error('Checklist API returned', res.status, await res.text());
+        return false;
+      }
+      const json = await res.json();
+      const checklist = json && json.ok ? json.checklist : [];
+      console.debug('Loaded checklist for project (API)', projectId, checklist);
+      const required = checklist.filter((c: any) => c.is_required !== false);
+      if (required.length === 0) return true;
+      const allReceived = required.every((c: any) => {
+        if (c.is_received === true) return true;
+        if (c.is_received === 1) return true;
+        if (c.is_received === '1') return true;
+        if (typeof c.is_received === 'string' && c.is_received.toLowerCase() === 'true') return true;
+        if (c.is_received === 't') return true;
+        return false;
+      });
+      return allReceived;
+    } catch (err) {
+      console.error('Checklist check failed:', err);
+      return false;
+    }
   };
 
   const tryAdvanceFromDocumentStage = async () => {
-    const ok = await isChecklistComplete();
-    if (ok) {
-      await updateProjectStage(3);
-    } else {
-      toast({ title: 'Required documents missing', description: 'All required documents must be collected to advance this stage.', variant: 'destructive' });
+    try {
+      const ok = await isChecklistComplete();
+      if (ok) {
+        await updateProjectStage(3);
+      } else {
+        toast({ title: 'Required documents missing', description: 'All required documents must be collected to advance this stage.', variant: 'destructive' });
+      }
+    } catch (err: any) {
+      console.error('Error advancing from document stage:', err);
+      toast({ title: 'Unable to verify checklist', description: err?.message || 'Please try again or check server logs', variant: 'destructive' });
     }
   };
 
@@ -93,28 +162,56 @@ export default function ProjectView({ projectId, onClose }: ProjectViewProps) {
   };
 
   const saveSubmissionStatus = async () => {
-    await supabase.from('projects').update({ submission_status: submissionStatus }).eq('id', projectId);
-    if (submissionStatus === 'submitted') {
-      // go to tracking stage to capture details
-      await updateProjectStage(5);
-    } else {
-      // remain in this stage
-      loadProject();
+    try {
+      const storedEmail = window.localStorage.getItem('userEmail');
+      const headers: Record<string,string> = { 'Content-Type': 'application/json' };
+      if (storedEmail) headers['x-user-email'] = storedEmail;
+      const res = await fetch(`/api/projects/${projectId}/stage`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({ submission_status: submissionStatus })
+      });
+      if (!res.ok) {
+        console.error('Failed to save submission status', await res.text());
+        toast({ title: 'Save failed', description: 'Unable to update submission status', variant: 'destructive' });
+        return;
+      }
+      if (submissionStatus === 'submitted') {
+        await updateProjectStage(5);
+      } else {
+        loadProject();
+      }
+    } catch (err) {
+      console.error('Error saving submission status', err);
+      toast({ title: 'Save failed', description: String(err), variant: 'destructive' });
     }
   };
 
   const saveSubmissionDetails = async () => {
-    await supabase.from('projects').update({
-      submission_type: submissionDetails.submission_type,
-      submission_center: submissionDetails.submission_center,
-      submission_date: submissionDetails.submission_date,
-      visa_ref: submissionDetails.visa_ref,
-      vfs_receipt: submissionDetails.vfs_receipt,
-      receipt_number: submissionDetails.receipt_number
-    }).eq('id', projectId);
-
-    // advance to final stage
-    await updateProjectStage(6);
+    try {
+      const storedEmail = window.localStorage.getItem('userEmail');
+      const headers: Record<string,string> = { 'Content-Type': 'application/json' };
+      if (storedEmail) headers['x-user-email'] = storedEmail;
+      const body = {
+        submission_type: submissionDetails.submission_type,
+        submission_center: submissionDetails.submission_center,
+        submission_date: submissionDetails.submission_date,
+        visa_ref: submissionDetails.visa_ref,
+        vfs_receipt: submissionDetails.vfs_receipt,
+        receipt_number: submissionDetails.receipt_number
+      };
+      const res = await fetch(`/api/projects/${projectId}/stage`, { method: 'PATCH', headers, body: JSON.stringify(body) });
+      if (!res.ok) {
+        console.error('Failed to save submission details', await res.text());
+        toast({ title: 'Save failed', description: 'Unable to save submission details', variant: 'destructive' });
+        return;
+      }
+      // advance to final stage
+      await updateProjectStage(6);
+    } catch (err) {
+      console.error('Error saving submission details', err);
+      toast({ title: 'Save failed', description: String(err), variant: 'destructive' });
+    }
   };
 
   if (loading) return <div>Loading...</div>;
@@ -127,6 +224,28 @@ export default function ProjectView({ projectId, onClose }: ProjectViewProps) {
           <p className="text-sm text-gray-600">Client: {project?.client_name}</p>
         </div>
         <div className="flex gap-2">
+          <Button variant="destructive" onClick={async () => {
+            if (!confirm('Delete this project? This action cannot be undone.')) return;
+            try {
+              const res = await fetch(`/api/projects/${projectId}`, { method: 'DELETE' });
+              const ct = res.headers.get('content-type') || '';
+              let body: any = null;
+              if (ct.includes('application/json')) body = await res.json().catch(() => null);
+              else body = await res.text().catch(() => null);
+              if (!res.ok) {
+                const msg = (body && (body.error || body.message)) ? (body.error || body.message) : (typeof body === 'string' ? body : 'Server error when deleting project');
+                console.error('Delete failed', res.status, msg);
+                toast({ title: 'Delete failed', description: msg, variant: 'destructive' });
+                return;
+              }
+              try { window.dispatchEvent(new CustomEvent('project:deleted', { detail: { projectId } })); } catch (e) {}
+              toast({ title: 'Project deleted', description: 'Project was removed successfully.' });
+              onClose();
+            } catch (err) {
+              console.error('Delete request failed', err);
+              toast({ title: 'Delete failed', description: String(err), variant: 'destructive' });
+            }
+          }}>Delete</Button>
           <Button variant="outline" onClick={onClose}>Close</Button>
         </div>
       </div>
@@ -225,7 +344,7 @@ export default function ProjectView({ projectId, onClose }: ProjectViewProps) {
                 </div>
                 <div>
                   <label className="text-sm">Date of Submission</label>
-                  <input type="date" className="w-full p-2 border rounded" value={submissionDetails.submission_date} onChange={(e) => setSubmissionDetails({ ...submissionDetails, submission_date: e.target.value })} />
+                  <input type="date" className="w-full p-2 border rounded" value={formatForDateInput(submissionDetails.submission_date)} onChange={(e) => setSubmissionDetails({ ...submissionDetails, submission_date: e.target.value ? formatForDateInput(e.target.value) : '' })} />
                 </div>
                 <div>
                   <label className="text-sm">Visa Reference</label>

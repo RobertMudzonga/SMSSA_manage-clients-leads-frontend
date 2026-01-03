@@ -1,8 +1,10 @@
 import { useState, useCallback } from 'react';
 import { Upload, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
+import { CLIENT_UPLOADS_ENABLED } from '@/utils/documentSettings';
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface DocumentUploadZoneProps {
   projectId: string;
@@ -20,6 +22,8 @@ export default function DocumentUploadZone({
   const [uploading, setUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [uploadResult, setUploadResult] = useState<any>(null);
+  const { toast } = useToast();
+  const { user } = useAuth();
 
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -36,29 +40,27 @@ export default function DocumentUploadZone({
     setUploadResult(null);
 
     try {
-      const filePath = `${projectId}/${checklistItemId}/${Date.now()}-${file.name}`;
-      
-      const { error: uploadError } = await supabase.storage
-        .from('client-documents')
-        .upload(filePath, file);
+      // Use backend upload endpoint which stores content in DB
+      const fd = new FormData();
+      fd.append('file', file);
+      if (projectId) fd.append('project_id', String(projectId));
+      if (checklistItemId) fd.append('checklist_item_id', String(checklistItemId));
 
-      if (uploadError) throw uploadError;
+      const headers: Record<string,string> = {};
+      if (user && user.email) headers['x-user-email'] = user.email;
 
-      const { data, error } = await supabase.functions.invoke('upload-client-document', {
-        body: {
-          projectId,
-          checklistItemId,
-          fileName: file.name,
-          filePath,
-          fileSize: file.size,
-          fileType: file.type
-        }
-      });
+      const res = await fetch('/api/documents/upload', { method: 'POST', body: fd, headers });
+      const ct = res.headers.get('content-type') || '';
+      let json: any = null;
+      if (ct.includes('application/json')) json = await res.json(); else { const t = await res.text(); try { json = JSON.parse(t); } catch { json = { error: t }; } }
 
-      if (error) throw error;
+      if (!res.ok) {
+        throw new Error(json?.error || `Upload failed: ${res.status}`);
+      }
 
-      setUploadResult(data);
-      if (data.uploadStatus === 'approved') {
+      setUploadResult(json || { uploadStatus: 'approved' });
+      // trigger parent refresh if backend confirms document creation
+      if (json && (json.document || json.uploadStatus === 'approved')) {
         setTimeout(() => onUploadSuccess(), 1500);
       }
     } catch (error: any) {
@@ -86,6 +88,37 @@ export default function DocumentUploadZone({
       uploadFile(e.target.files[0]);
     }
   };
+
+  const notifyManager = async () => {
+    try {
+      const headers: Record<string,string> = { 'Content-Type': 'application/json' };
+      const storedEmail = window.localStorage.getItem('userEmail');
+      if (storedEmail) headers['x-user-email'] = storedEmail;
+      const res = await fetch(`/api/checklists/${checklistItemId}`, { method: 'PATCH', headers, body: JSON.stringify({ reminder_sent_date: new Date().toISOString() }) });
+      if (!res.ok) {
+        const t = await res.text().catch(() => '');
+        throw new Error(t || 'Notify failed');
+      }
+      toast({ title: 'Project manager notified', description: 'A reminder has been sent to the project manager.' });
+    } catch (err: any) {
+      console.error('Notify error', err);
+      toast({ title: 'Notification failed', variant: 'destructive' });
+    }
+  };
+
+  if (!CLIENT_UPLOADS_ENABLED) {
+    return (
+      <Card className="p-4">
+        <div className="mb-3">
+          <h4 className="font-medium text-sm">{documentName}</h4>
+        </div>
+        <div className="text-sm text-gray-700 mb-3">Uploads are disabled. Please notify your project manager to mark this document as received once submitted offline.</div>
+        <div className="flex gap-2">
+          <Button onClick={notifyManager}>Notify Project Manager</Button>
+        </div>
+      </Card>
+    );
+  }
 
   return (
     <Card className="p-4">

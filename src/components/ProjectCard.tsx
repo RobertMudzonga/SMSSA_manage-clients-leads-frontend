@@ -3,8 +3,8 @@ import { visaTimelines } from '@/utils/visaTimelines';
 import { calculateExpectedDates, isProjectBehindSchedule } from '@/utils/progressCalculations';
 import { Calendar, AlertCircle, FileCheck, Link2, Copy } from 'lucide-react';
 import { Button } from './ui/button';
-import { supabase } from '@/lib/supabase';
 import { useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 
 
@@ -24,27 +24,35 @@ export default function ProjectCard({ project, onClick }: ProjectCardProps) {
     low: 'text-green-600'
   }[project.priority] || 'text-gray-600';
 
-  const timeline = visaTimelines[project.case_type || project.project_type];
+  const timeline = visaTimelines[project?.case_type || project?.project_type];
   const isBehind = isProjectBehindSchedule(project);
-  const expectedDates = project.start_date ? calculateExpectedDates(project.case_type || project.project_type, new Date(project.start_date)) : null;
+  const expectedDates = project?.start_date ? calculateExpectedDates(project.case_type || project.project_type, new Date(project.start_date)) : null;
+  const safePriority = String(project?.priority ?? '');
+  const displayPriority = safePriority.toUpperCase();
+  const progress = Number(project?.progress) || 0;
+  // If explicit progress not provided, derive from stage/current_stage
+  const stageNum = Number(project?.current_stage ?? project?.stage ?? project?.stage_number ?? 0) || 0;
+  const derivedProgress = stageNum > 0 ? Math.round(((stageNum - 1) / (6 - 1)) * 100) : 0;
+  const displayProgress = progress > 0 ? progress : derivedProgress;
+  const paymentAmountVal = typeof project?.payment_amount !== 'undefined' && project?.payment_amount !== null ? Number(project.payment_amount) : null;
+  const formattedPayment = paymentAmountVal !== null && !isNaN(paymentAmountVal) ? new Intl.NumberFormat('en-ZA', { style: 'currency', currency: 'ZAR' }).format(paymentAmountVal) : null;
   
   const handleGenerateAccess = async (e: React.MouseEvent) => {
     e.stopPropagation();
     setGeneratingAccess(true);
-    
+    const { user } = useAuth();
     try {
-      const { data, error } = await supabase.functions.invoke('generate-client-access', {
-        body: {
-          projectId: project.id,
-          clientEmail: project.client_email,
-          expiryDays: 90
-        }
+      const resp = await fetch('/api/functions/generate-client-access', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-email': user?.email || (localStorage.getItem('userEmail') || '')
+        },
+        body: JSON.stringify({ projectId: project.project_id || project.id, clientEmail: project.client_email, expiryDays: 90 })
       });
-      
-      if (error) throw error;
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data?.error || 'Failed to generate access');
       setPortalUrl(data.portalUrl);
-      
-      // Copy to clipboard
       navigator.clipboard.writeText(data.portalUrl);
       toast({ title: 'Client portal link copied to clipboard!' });
     } catch (error) {
@@ -72,8 +80,12 @@ export default function ProjectCard({ project, onClick }: ProjectCardProps) {
         <div className="flex-1">
           <h3 className="font-semibold text-gray-900">{project.project_name}</h3>
           <p className="text-sm text-gray-600">{project.case_type || project.project_type}</p>
+          {project.client_name && <p className="text-sm text-gray-600 mt-1">Client: {project.client_name}</p>}
         </div>
-        <StatusBadge status={project.status} type="project" />
+        <div className="flex flex-col items-end gap-1">
+          <StatusBadge status={project.status} type="project" />
+          {formattedPayment && <div className="text-sm text-gray-700 font-medium">{formattedPayment}</div>}
+        </div>
       </div>
 
       {expectedDates && (
@@ -84,14 +96,14 @@ export default function ProjectCard({ project, onClick }: ProjectCardProps) {
       )}
       
       <div className="mb-3">
-        <div className="flex justify-between text-sm mb-1">
+          <div className="flex justify-between text-sm mb-1">
           <span className="text-gray-600">Progress</span>
-          <span className="font-medium">{project.progress}%</span>
+          <span className="font-medium">{displayProgress}%</span>
         </div>
         <div className="w-full bg-gray-200 rounded-full h-2">
           <div 
             className="bg-teal-500 h-2 rounded-full transition-all"
-            style={{ width: `${project.progress}%` }}
+            style={{ width: `${displayProgress}%` }}
           />
         </div>
       </div>
@@ -112,7 +124,7 @@ export default function ProjectCard({ project, onClick }: ProjectCardProps) {
       <div className="flex flex-col gap-2 mt-3 pt-3 border-t border-gray-100">
         <div className="flex items-center justify-between">
           <p className={`text-xs font-medium ${priorityColor}`}>
-            {project.priority.toUpperCase()} PRIORITY
+            {displayPriority} PRIORITY
           </p>
         </div>
         <div className="flex gap-2">

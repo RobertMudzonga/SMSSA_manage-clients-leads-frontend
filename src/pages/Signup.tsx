@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/lib/supabase';
+import { API_BASE } from '@/lib/api';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -30,13 +30,17 @@ export default function Signup() {
 
     setLoading(true);
     try {
-      const { data, error } = await supabase.auth.signUp({ email, password });
-      if (error) {
-        toast({ title: 'Signup failed', description: error.message || 'Check details', variant: 'destructive' });
+      const r = await fetch(`${API_BASE}/auth/signup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      const json = await r.json().catch(() => null);
+      if (!r.ok) {
+        toast({ title: 'Signup failed', description: json?.error || 'Check details', variant: 'destructive' });
         return;
       }
-
-      toast({ title: 'Signup successful', description: 'Check your email for confirmation.' });
+      toast({ title: 'Signup successful', description: 'Account created (dev). You can now log in.' });
       navigate('/');
     } catch (err) {
       console.error('Signup error', err);

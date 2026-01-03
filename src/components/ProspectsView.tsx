@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import PipelineColumn from './PipelineColumn';
@@ -52,6 +52,26 @@ export default function ProspectsView({
   const [selectedProspect, setSelectedProspect] = useState<any>(null);
   const [viewMode, setViewMode] = useState<'pipeline' | 'list'>('pipeline');
   const [autoMode, setAutoMode] = useState(true); // if true, auto-switch based on viewport width
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [importPreviewOpen, setImportPreviewOpen] = useState(false);
+  const [importPreviewRows, setImportPreviewRows] = useState<any[]>([]);
+  const [importingFile, setImportingFile] = useState<File | null>(null);
+
+  function exportToCsv(filename: string, rows: any[]) {
+    if (!rows || rows.length === 0) {
+      toast({ title: 'No data to export' });
+      return;
+    }
+    const keys = Object.keys(rows[0]);
+    const csv = [keys.join(',')].concat(rows.map(r => keys.map(k => `"${(r[k] ?? '').toString().replace(/"/g,'""')}"`).join(','))).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  }
 
   useEffect(() => {
     // decide initial mode based on viewport width
@@ -137,12 +157,70 @@ export default function ProspectsView({
               <List className="w-4 h-4" />
             </button>
           </div>
-          <button 
-            onClick={() => setIsAddModalOpen(true)}
-            className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700"
-          >
-            Add Prospect
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => exportToCsv('prospects.csv', prospects)}
+              className="px-3 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300"
+            >
+              Export
+            </button>
+            <input
+              type="file"
+              accept=".xlsx,.xls,.csv"
+              style={{ display: 'none' }}
+              ref={fileInputRef}
+              onChange={async (e) => {
+                const f = e.target.files?.[0];
+                if (!f) return;
+                setImportingFile(f);
+                // First perform a dry-run to preview mapping
+                const fd = new FormData();
+                fd.append('file', f);
+                fd.append('target', 'prospects');
+                fd.append('dryRun', 'true');
+                try {
+                  const res = await fetch('/api/import', { method: 'POST', body: fd });
+                  let json;
+                  const ct = res.headers.get('content-type') || '';
+                  if (ct.includes('application/json')) {
+                    json = await res.json();
+                  } else {
+                    const txt = await res.text();
+                    try { json = JSON.parse(txt); } catch { json = { error: txt }; }
+                  }
+                  if (res.ok && json && json.result && json.result.mappedRows) {
+                    // pick the first sheet key
+                    const sheetKeys = Object.keys(json.result.mappedRows);
+                    if (sheetKeys.length > 0) {
+                      const mapped = json.result.mappedRows[sheetKeys[0]].prospects || [];
+                      setImportPreviewRows(mapped || []);
+                      setImportPreviewOpen(true);
+                    } else {
+                      toast({ title: 'No mapped rows returned', variant: 'destructive' });
+                    }
+                  } else {
+                    toast({ title: 'Dry-run failed', description: json.error || 'Server error', variant: 'destructive' });
+                  }
+                } catch (err) {
+                  console.error(err);
+                  toast({ title: 'Dry-run failed', variant: 'destructive' });
+                }
+                (e.target as HTMLInputElement).value = '';
+              }}
+            />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="px-3 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300"
+            >
+              Import
+            </button>
+            <button 
+              onClick={() => setIsAddModalOpen(true)}
+              className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700"
+            >
+              Add Prospect
+            </button>
+          </div>
         </div>
       </div>
 
@@ -186,7 +264,6 @@ export default function ProspectsView({
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500" onClick={() => setSelectedProspect(p)}>
                       {p.quote_amount ? `$${p.quote_amount.toLocaleString()}` : '-'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500" onClick={() => setSelectedProspect(p)}>{p.lead_source || '-'}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       <div className="flex gap-2">
                         <button onClick={() => openConfirmWon(p.id)} className="px-3 py-1 bg-green-600 text-white rounded text-xs">Mark Won</button>
@@ -194,7 +271,7 @@ export default function ProspectsView({
                       </div>
                     </td>
                   </tr>
-              ))}
+                ))}
             </tbody>
           </table>
         </div>
@@ -230,6 +307,72 @@ export default function ProspectsView({
             <div className="flex gap-2 justify-end">
               <button className="px-3 py-1 rounded bg-gray-100" onClick={() => setConfirmWonOpen(false)}>Cancel</button>
               <button className="px-3 py-1 rounded bg-green-600 text-white" onClick={performMarkWon}>Mark Won</button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      <Dialog open={importPreviewOpen} onOpenChange={setImportPreviewOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Import Preview</DialogTitle>
+            <DialogDescription>Preview of mapped rows (first 50). Confirm to run actual import.</DialogDescription>
+          </DialogHeader>
+          <div className="mt-4 max-h-80 overflow-auto">
+            {importPreviewRows.length === 0 ? (
+              <div className="text-sm text-gray-600">No rows to preview.</div>
+            ) : (
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr>
+                    {Object.keys(importPreviewRows[0]).map(k => (
+                      <th key={k} className="px-2 py-1 text-left font-medium text-gray-600">{k}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {importPreviewRows.slice(0,50).map((r, i) => (
+                    <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                      {Object.keys(importPreviewRows[0]).map(k => (
+                        <td key={k} className="px-2 py-1">{String(r[k] ?? '')}</td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+          <DialogFooter>
+            <div className="flex gap-2 justify-end">
+              <button className="px-3 py-1 rounded bg-gray-100" onClick={() => { setImportPreviewOpen(false); setImportPreviewRows([]); setImportingFile(null); }}>Cancel</button>
+              <button className="px-3 py-1 rounded bg-teal-600 text-white" onClick={async () => {
+                if (!importingFile) return;
+                const fd = new FormData();
+                fd.append('file', importingFile);
+                fd.append('target', 'prospects');
+                try {
+                  const res = await fetch('/api/import', { method: 'POST', body: fd });
+                  let json;
+                  const ct = res.headers.get('content-type') || '';
+                  if (ct.includes('application/json')) {
+                    json = await res.json();
+                  } else {
+                    const txt = await res.text();
+                    try { json = JSON.parse(txt); } catch { json = { error: txt }; }
+                  }
+                  if (res.ok) {
+                    toast({ title: 'Import complete', description: JSON.stringify(json.result) });
+                    setImportPreviewOpen(false);
+                    setImportPreviewRows([]);
+                    setImportingFile(null);
+                  } else {
+                    toast({ title: 'Import failed', description: json.error || 'Server error', variant: 'destructive' });
+                  }
+                } catch (err) {
+                  console.error(err);
+                  toast({ title: 'Import failed', variant: 'destructive' });
+                }
+              }}>Confirm Import</button>
             </div>
           </DialogFooter>
         </DialogContent>

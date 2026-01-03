@@ -1,4 +1,5 @@
-export const API_BASE = import.meta.env.VITE_API_BASE ?? 'https://smssa-backend.onrender.com/api';
+// Default to relative `/api` so Vite dev proxy routes to local backend during development.
+export const API_BASE = import.meta.env.VITE_API_BASE ?? '/api';
 
 export function apiUrl(path: string) {
   if (!path) return API_BASE;
