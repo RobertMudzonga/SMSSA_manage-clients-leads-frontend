@@ -97,6 +97,51 @@ export default function ProjectsView({ projects, onCreateProject, onProjectClick
     link.remove();
   }
 
+  const handleDeleteAll = async () => {
+    if (selectedProjects.size === 0) {
+      toast({ title: 'No projects selected', variant: 'destructive' });
+      return;
+    }
+
+    if (!confirm(`Delete ${selectedProjects.size} project${selectedProjects.size !== 1 ? 's' : ''}? This cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      const projectIds = Array.from(selectedProjects);
+      let successCount = 0;
+      let failureCount = 0;
+
+      for (const projectId of projectIds) {
+        try {
+          const res = await fetch(`/api/projects/${projectId}`, { method: 'DELETE' });
+          const json = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(json?.error || `Delete failed: ${res.status}`);
+          successCount++;
+        } catch (err) {
+          console.error(`Failed to delete project ${projectId}:`, err);
+          failureCount++;
+        }
+      }
+
+      setSelectedProjects(new Set());
+      if (typeof onRefresh === 'function') onRefresh();
+
+      if (failureCount === 0) {
+        toast({ title: `Successfully deleted ${successCount} project${successCount !== 1 ? 's' : ''}` });
+      } else {
+        toast({
+          title: `Deletion complete with errors`,
+          description: `Deleted: ${successCount}, Failed: ${failureCount}`,
+          variant: 'destructive'
+        });
+      }
+    } catch (err) {
+      console.error('Delete all failed:', err);
+      toast({ title: 'Failed to delete projects', description: String(err), variant: 'destructive' });
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -228,8 +273,16 @@ export default function ProjectsView({ projects, onCreateProject, onProjectClick
           </label>
         </div>
         {selectedProjects.size > 0 && (
-          <div className="text-sm text-gray-600 font-medium">
-            {selectedProjects.size} project{selectedProjects.size !== 1 ? 's' : ''} selected
+          <div className="flex items-center gap-3">
+            <div className="text-sm text-gray-600 font-medium">
+              {selectedProjects.size} project{selectedProjects.size !== 1 ? 's' : ''} selected
+            </div>
+            <button
+              onClick={handleDeleteAll}
+              className="px-3 py-1.5 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors"
+            >
+              Delete All
+            </button>
           </div>
         )}
       </div>
