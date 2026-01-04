@@ -1,8 +1,8 @@
 // Default to relative `/api` so Vite dev proxy routes to local backend during development.
 // In production, if `VITE_API_BASE` isn't set, default to the Render backend.
-// In production default to the Render backend domain (no trailing `/api`).
+// In production default to the Render backend domain with `/api` suffix.
 // Dev uses relative `/api` so Vite proxy still works.
-export const API_BASE = import.meta.env.VITE_API_BASE ?? (import.meta.env.PROD ? 'https://smssa-backend.onrender.com' : '/api');
+export const API_BASE = import.meta.env.VITE_API_BASE ?? (import.meta.env.PROD ? 'https://smssa-backend.onrender.com/api' : '/api');
 
 export function apiUrl(path: string) {
   if (!path) return API_BASE;
@@ -28,13 +28,15 @@ if (typeof window !== 'undefined' && typeof window.fetch === 'function') {
       window.fetch = (input: RequestInfo, init?: RequestInit) => {
         try {
           if (typeof input === 'string') {
-            if (input.startsWith('/api')) {
+            // Rewrite any path starting with / to use API_BASE
+            if (input.startsWith('/') && !input.startsWith('//')) {
               const base = API_BASE.replace(/\/$/, '');
               input = base + input;
             }
           } else if (input instanceof Request) {
             const reqUrl = input.url || '';
-            if (reqUrl.startsWith('/api')) {
+            // Rewrite any path starting with / to use API_BASE
+            if (reqUrl.startsWith('/') && !reqUrl.startsWith('//')) {
               const base = API_BASE.replace(/\/$/, '');
               input = new Request(base + reqUrl, input);
             }
