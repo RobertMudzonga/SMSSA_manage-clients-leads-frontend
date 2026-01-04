@@ -1,4 +1,4 @@
-import { TrendingUp, DollarSign, Users, Target } from 'lucide-react';
+import { TrendingUp, Users, Target } from 'lucide-react';
 
 interface PipelineStatsProps {
   prospects: any[];
@@ -28,9 +28,9 @@ export default function PipelineStats({ prospects }: PipelineStatsProps) {
   const activeLeads = pipelineMembers.filter(p => !isWon(p)).length;
 
   const stats = [
-    { label: 'Total Pipeline Value', value: `$${totalPipelineValue.toLocaleString()}`, icon: DollarSign, color: 'bg-green-100 text-green-600' },
+    { label: 'Total Pipeline Value', value: `ZAR ${totalPipelineValue.toLocaleString()}`, icon: Target, color: 'bg-green-100 text-green-600' },
     { label: 'Active Leads', value: activeLeads, icon: Users, color: 'bg-blue-100 text-blue-600' },
-    { label: 'Avg Deal Size', value: `$${avgDealSize > 0 ? avgDealSize.toFixed(2) : '0.00'}`, icon: Target, color: 'bg-purple-100 text-purple-600' },
+    { label: 'Avg Deal Size', value: `ZAR ${avgDealSize > 0 ? avgDealSize.toFixed(2) : '0.00'}`, icon: TrendingUp, color: 'bg-purple-100 text-purple-600' },
     { label: 'Conversion Rate', value: `${conversionRate.toFixed(1)}%`, icon: TrendingUp, color: 'bg-teal-100 text-teal-600' }
 
   ];

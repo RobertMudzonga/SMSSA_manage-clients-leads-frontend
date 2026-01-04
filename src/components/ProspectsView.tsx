@@ -262,7 +262,7 @@ export default function ProspectsView({
                       {PIPELINE_STAGES.find(s => s.key === p.pipeline_stage)?.label}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500" onClick={() => setSelectedProspect(p)}>
-                      {p.quote_amount ? `$${p.quote_amount.toLocaleString()}` : '-'}
+                      {p.quote_amount ? `R${Number(p.quote_amount).toLocaleString()}` : '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       <div className="flex gap-2">

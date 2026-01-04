@@ -1,4 +1,4 @@
-import { Calendar, DollarSign, Mail, Phone } from 'lucide-react';
+import { Calendar, Mail, Phone } from 'lucide-react';
 
 interface PipelineProspectCardProps {
   prospect: any;
@@ -44,8 +44,8 @@ export default function PipelineProspectCard({
           )}
           {prospect.quote_amount && (
             <div className="flex items-center gap-2">
-              <DollarSign className="w-3 h-3" />
-              <span className="font-medium">R{prospect.quote_amount.toLocaleString()}</span>
+              <span className="text-xs font-medium">R</span>
+              <span className="font-medium">{Number(prospect.quote_amount).toLocaleString()}</span>
             </div>
           )}
           {prospect.next_follow_up_date && (

@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { TrendingUp, Target, DollarSign, Award, Calendar } from 'lucide-react';
+import { TrendingUp, Target, Award, Calendar } from 'lucide-react';
 
 interface EmployeeDetailModalProps {
   employee: any;
@@ -109,7 +109,7 @@ export function EmployeeDetailModal({ employee, metrics, goals, reviews, open, o
               
               <Card className="p-4">
                 <div className="flex items-center gap-2 mb-2">
-                  <DollarSign className="w-4 h-4 text-purple-600" />
+                  <span className="w-4 h-4 text-purple-600 font-medium">R</span>
                   <span className="text-sm text-gray-500">Revenue</span>
                 </div>
                 <p className="text-2xl font-bold">R{metrics?.revenue_generated?.toLocaleString() || 0}</p>

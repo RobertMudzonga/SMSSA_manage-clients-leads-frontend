@@ -122,7 +122,7 @@ export function AnalyticsView() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card><CardHeader><CardTitle>Total Revenue</CardTitle></CardHeader>
-          <CardContent><p className="text-3xl font-bold">${analyticsData.totalRevenue.toFixed(2)}</p></CardContent>
+          <CardContent><p className="text-3xl font-bold">R{Number(analyticsData.totalRevenue).toFixed(2)}</p></CardContent>
         </Card>
         <Card><CardHeader><CardTitle>Projects Completed</CardTitle></CardHeader>
           <CardContent><p className="text-3xl font-bold">{analyticsData.completionRates.completed}</p></CardContent>

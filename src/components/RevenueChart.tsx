@@ -22,7 +22,7 @@ export function RevenueChart({ data }: RevenueChartProps) {
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="name" />
             <YAxis />
-            <Tooltip formatter={(value) => `$${value}`} />
+            <Tooltip formatter={(value) => `R${Number(value).toLocaleString()}`} />
             <Legend />
             <Bar dataKey="revenue" fill="#3b82f6" />
           </BarChart>

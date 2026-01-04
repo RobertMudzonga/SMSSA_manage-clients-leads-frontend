@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { formatForDateInput } from '@/utils/formatDate';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { X, Calendar, DollarSign, Tag } from 'lucide-react';
+import { X, Calendar, Tag } from 'lucide-react';
 
 interface ProspectDetailModalProps {
   prospect: any;
@@ -298,13 +298,13 @@ export default function ProspectDetailModal({
           {/* Quote Management */}
           <div className="border border-gray-200 rounded-lg p-4">
             <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <DollarSign className="w-5 h-5" />
+              <span className="text-sm font-medium">ZAR</span>
               Quote Management
             </h3>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Quote Amount
+                  Quote Amount (ZAR)
                 </label>
                 <input
                   type="number"
@@ -316,7 +316,7 @@ export default function ProspectDetailModal({
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Discount Amount
+                  Discount Amount (ZAR)
                 </label>
                 <input
                   type="number"
