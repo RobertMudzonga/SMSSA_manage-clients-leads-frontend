@@ -63,6 +63,24 @@ export default function ProjectCard({ project, onClick }: ProjectCardProps) {
     }
   };
 
+  const handleDeleteProject = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const id = project.project_id || project.id;
+    if (!id) return;
+    if (!confirm(`Delete project ${project.project_name || id}? This cannot be undone.`)) return;
+    try {
+      const res = await fetch(`/api/projects/${id}`, { method: 'DELETE' });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error || `Delete failed: ${res.status}`);
+      toast({ title: 'Project deleted' });
+      // notify other parts of the app to refresh
+      try { window.dispatchEvent(new CustomEvent('project:deleted', { detail: { projectId: id } })); } catch (e) { window.location.reload(); }
+    } catch (err) {
+      console.error('Delete failed:', err);
+      toast({ title: 'Failed to delete project', description: String(err), variant: 'destructive' });
+    }
+  };
+
   
   return (
     <div 
@@ -150,6 +168,12 @@ export default function ProjectCard({ project, onClick }: ProjectCardProps) {
             <Link2 className="w-3 h-3" />
             {generatingAccess ? 'Generating...' : 'Client Portal'}
           </Button>
+          <button
+            onClick={handleDeleteProject}
+            className="px-2 text-xs h-7 rounded bg-red-600 text-white hover:bg-red-700 flex-1"
+          >
+            Delete
+          </button>
         </div>
       </div>
 
