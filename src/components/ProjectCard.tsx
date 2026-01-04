@@ -11,9 +11,11 @@ import { useToast } from '@/hooks/use-toast';
 interface ProjectCardProps {
   project: any;
   onClick: () => void;
+  isSelected?: boolean;
+  onSelectionChange?: (selected: boolean) => void;
 }
 
-export default function ProjectCard({ project, onClick }: ProjectCardProps) {
+export default function ProjectCard({ project, onClick, isSelected = false, onSelectionChange }: ProjectCardProps) {
   const [generatingAccess, setGeneratingAccess] = useState(false);
   const [portalUrl, setPortalUrl] = useState<string | null>(null);
   const { toast } = useToast();
@@ -85,7 +87,7 @@ export default function ProjectCard({ project, onClick }: ProjectCardProps) {
   return (
     <div 
       onClick={onClick}
-      className={`bg-white rounded-lg shadow-sm border p-4 hover:shadow-md transition-shadow cursor-pointer ${isBehind ? 'border-red-300 bg-red-50' : 'border-gray-200'}`}
+      className={`bg-white rounded-lg shadow-sm border p-4 hover:shadow-md transition-shadow cursor-pointer ${isBehind ? 'border-red-300 bg-red-50' : 'border-gray-200'} ${isSelected ? 'ring-2 ring-teal-500 border-teal-500' : ''}`}
     >
       {isBehind && (
         <div className="flex items-center gap-1 text-red-600 text-xs font-medium mb-2">
@@ -95,9 +97,20 @@ export default function ProjectCard({ project, onClick }: ProjectCardProps) {
       )}
       
       <div className="flex items-start justify-between mb-3">
-        <div className="flex-1">
-          <h3 className="font-semibold text-gray-900">{project.project_name}</h3>
-          <p className="text-sm text-gray-600">{project.case_type || project.project_type}</p>
+        <div className="flex items-start gap-3 flex-1">
+          <input
+            type="checkbox"
+            checked={isSelected}
+            onChange={(e) => {
+              e.stopPropagation();
+              onSelectionChange?.(e.target.checked);
+            }}
+            onClick={(e) => e.stopPropagation()}
+            className="w-5 h-5 mt-0.5 cursor-pointer accent-teal-600"
+          />
+          <div className="flex-1">
+            <h3 className="font-semibold text-gray-900">{project.project_name}</h3>
+            <p className="text-sm text-gray-600">{project.case_type || project.project_type}</p>
           {project.client_name && <p className="text-sm text-gray-600 mt-1">Client: {project.client_name}</p>}
         </div>
         <div className="flex flex-col items-end gap-1">

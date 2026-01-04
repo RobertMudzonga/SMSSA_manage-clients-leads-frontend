@@ -25,6 +25,7 @@ export default function ProjectsView({ projects, onCreateProject, onProjectClick
   const [importPreviewOpen, setImportPreviewOpen] = useState(false);
   const [importPreviewRows, setImportPreviewRows] = useState<any[]>([]);
   const [importingFile, setImportingFile] = useState<File | null>(null);
+  const [selectedProjects, setSelectedProjects] = useState<Set<string>>(new Set());
 
 
   const safeProjects = Array.isArray(projects) ? projects : [];
@@ -54,6 +55,31 @@ export default function ProjectsView({ projects, onCreateProject, onProjectClick
     const matchesStatus = filterStatus === 'all' || status.toLowerCase() === filterStatus.toLowerCase();
     return matchesSearch && matchesStatus;
   });
+
+  // Selection functions
+  const toggleProjectSelection = (projectId: string) => {
+    const newSelected = new Set(selectedProjects);
+    if (newSelected.has(projectId)) {
+      newSelected.delete(projectId);
+    } else {
+      newSelected.add(projectId);
+    }
+    setSelectedProjects(newSelected);
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedProjects.size === filteredProjects.length && filteredProjects.length > 0) {
+      setSelectedProjects(new Set());
+    } else {
+      const allIds = new Set(
+        filteredProjects.map((p, idx) => p?.project_id || p?.id || p?.projectId || `project-${idx}`)
+      );
+      setSelectedProjects(allIds);
+    }
+  };
+
+  const isAllSelected = filteredProjects.length > 0 && selectedProjects.size === filteredProjects.length;
+  const isIndeterminate = selectedProjects.size > 0 && selectedProjects.size < filteredProjects.length;
 
   function exportToCsv(filename: string, rows: any[]) {
     if (!rows || rows.length === 0) {
@@ -185,6 +211,29 @@ export default function ProjectsView({ projects, onCreateProject, onProjectClick
         </select>
       </div>
 
+      <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            id="select-all"
+            checked={isAllSelected}
+            ref={(el) => {
+              if (el) el.indeterminate = isIndeterminate;
+            }}
+            onChange={toggleSelectAll}
+            className="w-5 h-5 cursor-pointer accent-teal-600"
+          />
+          <label htmlFor="select-all" className="cursor-pointer font-medium text-gray-700">
+            Select All
+          </label>
+        </div>
+        {selectedProjects.size > 0 && (
+          <div className="text-sm text-gray-600 font-medium">
+            {selectedProjects.size} project{selectedProjects.size !== 1 ? 's' : ''} selected
+          </div>
+        )}
+      </div>
+
       {viewMode === 'grid' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredProjects.map((project, idx) => {
@@ -194,6 +243,18 @@ export default function ProjectsView({ projects, onCreateProject, onProjectClick
                 key={id}
                 project={project}
                 onClick={() => onProjectClick(id)}
+                isSelected={selectedProjects.has(id)}
+                onSelectionChange={(selected) => {
+                  if (selected) {
+                    const newSelected = new Set(selectedProjects);
+                    newSelected.add(id);
+                    setSelectedProjects(newSelected);
+                  } else {
+                    const newSelected = new Set(selectedProjects);
+                    newSelected.delete(id);
+                    setSelectedProjects(newSelected);
+                  }
+                }}
               />
             );
           })}
