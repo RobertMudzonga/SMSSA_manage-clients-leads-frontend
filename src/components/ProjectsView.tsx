@@ -114,7 +114,7 @@ export default function ProjectsView({ projects, onCreateProject, onProjectClick
 
       for (const projectId of projectIds) {
         try {
-          const res = await fetch(`/api/projects/${projectId}`, { method: 'DELETE' });
+          const res = await fetch(`/projects/${projectId}`, { method: 'DELETE' });
           const json = await res.json().catch(() => ({}));
           if (!res.ok) throw new Error(json?.error || `Delete failed: ${res.status}`);
           successCount++;
