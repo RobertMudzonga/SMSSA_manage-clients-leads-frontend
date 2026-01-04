@@ -1,5 +1,6 @@
 // Default to relative `/api` so Vite dev proxy routes to local backend during development.
-export const API_BASE = import.meta.env.VITE_API_BASE ?? '/api';
+// In production, if `VITE_API_BASE` isn't set, default to the Render backend.
+export const API_BASE = import.meta.env.VITE_API_BASE ?? (import.meta.env.PROD ? 'https://smssa-backend.onrender.com/api' : '/api');
 
 export function apiUrl(path: string) {
   if (!path) return API_BASE;
