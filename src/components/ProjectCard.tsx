@@ -112,6 +112,9 @@ export default function ProjectCard({ project, onClick, isSelected = false, onSe
             <h3 className="font-semibold text-gray-900">{project.project_name}</h3>
             <p className="text-sm text-gray-600">{project.case_type || project.project_type}</p>
             {project.client_name && <p className="text-sm text-gray-600 mt-1">Client: {project.client_name}</p>}
+            {project.project_manager_name && (
+              <p className="text-sm text-gray-600 mt-1">Manager: {project.project_manager_name}</p>
+            )}
           </div>
         </div>
         <div className="flex flex-col items-end gap-1">

@@ -13,9 +13,10 @@ interface ProjectsViewProps {
   onCreateProject: (data: any) => void;
   onProjectClick: (projectId: string) => void;
   onRefresh?: () => void;
+  employees?: any[];
 }
 
-export default function ProjectsView({ projects, onCreateProject, onProjectClick, onRefresh }: ProjectsViewProps) {
+export default function ProjectsView({ projects, onCreateProject, onProjectClick, onRefresh, employees = [] }: ProjectsViewProps) {
   const { toast } = useToast();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -326,6 +327,7 @@ export default function ProjectsView({ projects, onCreateProject, onProjectClick
           onCreateProject(data);
           setIsModalOpen(false);
         }}
+        employees={employees}
       />
       
       <Dialog open={importPreviewOpen} onOpenChange={setImportPreviewOpen}>

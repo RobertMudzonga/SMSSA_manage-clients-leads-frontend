@@ -484,6 +484,7 @@ export default function AppLayout() {
             projects={projects} 
             onCreateProject={handleCreateProject} 
             onProjectClick={setSelectedProjectForChecklist}
+            employees={employees}
             onRefresh={loadData}
           />
         )}

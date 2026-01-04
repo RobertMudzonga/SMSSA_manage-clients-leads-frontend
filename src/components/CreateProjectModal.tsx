@@ -5,9 +5,10 @@ interface CreateProjectModalProps {
   onClose: () => void;
   onSubmit: (data: any) => void;
   clientId?: string;
+  employees?: Array<{ id: number; full_name: string; work_email?: string }>;
 }
 
-export default function CreateProjectModal({ isOpen, onClose, onSubmit, clientId }: CreateProjectModalProps) {
+export default function CreateProjectModal({ isOpen, onClose, onSubmit, clientId, employees = [] }: CreateProjectModalProps) {
   const [formData, setFormData] = useState({
     project_name: '',
     client_name: '',
@@ -15,7 +16,8 @@ export default function CreateProjectModal({ isOpen, onClose, onSubmit, clientId
     case_type: 'Work Visa',
     priority: 'medium',
     start_date: '',
-    payment_amount: ''
+    payment_amount: '',
+    project_manager_id: '' as number | ''
   });
 
   function formatForDateInput(value: string | Date | null) {
@@ -68,8 +70,8 @@ export default function CreateProjectModal({ isOpen, onClose, onSubmit, clientId
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit({ ...formData, client_id: clientId });
-    setFormData({ project_name: '', client_name: '', client_email: '', case_type: 'Work Visa', priority: 'medium', start_date: '', payment_amount: '' });
+    onSubmit({ ...formData, client_id: clientId, project_manager_id: formData.project_manager_id || null });
+    setFormData({ project_name: '', client_name: '', client_email: '', case_type: 'Work Visa', priority: 'medium', start_date: '', payment_amount: '', project_manager_id: '' });
   };
 
   return (
@@ -115,6 +117,19 @@ export default function CreateProjectModal({ isOpen, onClose, onSubmit, clientId
             onChange={(e) => setFormData({...formData, payment_amount: e.target.value})}
             className="w-full px-3 py-2 border rounded-lg"
           />
+
+          <select
+            value={formData.project_manager_id}
+            onChange={(e) => setFormData({ ...formData, project_manager_id: e.target.value ? Number(e.target.value) : '' })}
+            className="w-full px-3 py-2 border rounded-lg"
+          >
+            <option value="">Select Project Manager (optional)</option>
+            {employees.map((emp) => (
+              <option key={emp.id} value={emp.id}>
+                {emp.full_name} {emp.work_email ? `- ${emp.work_email}` : ''}
+              </option>
+            ))}
+          </select>
 
           <select
             value={formData.case_type}
