@@ -39,14 +39,14 @@ export function EmployeeCard({ employee, metrics, onClick }: EmployeeCardProps) 
           <TrendingUp className="w-4 h-4 text-blue-600" />
           <div>
             <p className="text-xs text-gray-500">Projects</p>
-            <p className="font-semibold">{metrics?.projects_completed || 0}</p>
+            <p className="font-semibold">{employee.projects_count || metrics?.projects_completed || 0}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <Target className="w-4 h-4 text-green-600" />
           <div>
             <p className="text-xs text-gray-500">Conversions</p>
-            <p className="font-semibold">{metrics?.prospects_converted || 0}</p>
+            <p className="font-semibold">{employee.conversions_count || metrics?.prospects_converted || 0}</p>
           </div>
         </div>
       </div>
