@@ -21,6 +21,8 @@ export default function ProjectsView({ projects, onCreateProject, onProjectClick
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [filterVisaType, setFilterVisaType] = useState('all');
+  const [filterProjectManager, setFilterProjectManager] = useState('all');
   const [viewMode, setViewMode] = useState<'grid' | 'gantt' | 'kanban'>('grid');
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [importPreviewOpen, setImportPreviewOpen] = useState(false);
@@ -30,6 +32,10 @@ export default function ProjectsView({ projects, onCreateProject, onProjectClick
 
 
   const safeProjects = Array.isArray(projects) ? projects : [];
+
+  // Extract unique visa types and project managers from projects
+  const uniqueVisaTypes = Array.from(new Set(safeProjects.map(p => p?.case_type).filter(Boolean))).sort();
+  const uniqueProjectManagers = Array.from(new Set(safeProjects.map(p => p?.project_manager_name).filter(Boolean))).sort();
 
   // Listen for stage-updated events and trigger a refresh if provided
   useEffect(() => {
@@ -52,9 +58,15 @@ export default function ProjectsView({ projects, onCreateProject, onProjectClick
   const filteredProjects = safeProjects.filter(p => {
     const name = (p && (p.project_name || p.name || ''));
     const status = (p && (p.status || '')).toString();
+    const caseType = (p && (p.case_type || '')).toString();
+    const managerName = (p && (p.project_manager_name || '')).toString();
+    
     const matchesSearch = name.toLowerCase().includes((searchTerm || '').toLowerCase());
     const matchesStatus = filterStatus === 'all' || status.toLowerCase() === filterStatus.toLowerCase();
-    return matchesSearch && matchesStatus;
+    const matchesVisaType = filterVisaType === 'all' || caseType === filterVisaType;
+    const matchesManager = filterProjectManager === 'all' || managerName === filterProjectManager;
+    
+    return matchesSearch && matchesStatus && matchesVisaType && matchesManager;
   });
 
   // Selection functions
@@ -237,24 +249,46 @@ export default function ProjectsView({ projects, onCreateProject, onProjectClick
 
       <ProjectAlerts projects={projects} />
 
-      <div className="flex gap-4">
-        <input
-          type="text"
-          placeholder="Search projects..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="flex-1 px-4 py-2 border border-gray-300 rounded-lg"
-        />
-        <select
-          value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value)}
-          className="px-4 py-2 border border-gray-300 rounded-lg"
-        >
-          <option value="all">All Status</option>
-          <option value="active">Active</option>
-          <option value="in-progress">In Progress</option>
-          <option value="completed">Completed</option>
-        </select>
+      <div className="flex flex-col gap-4">
+        <div className="flex gap-4 flex-wrap">
+          <input
+            type="text"
+            placeholder="Search projects..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="flex-1 min-w-64 px-4 py-2 border border-gray-300 rounded-lg"
+          />
+          <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-lg"
+          >
+            <option value="all">All Status</option>
+            <option value="active">Active</option>
+            <option value="in-progress">In Progress</option>
+            <option value="completed">Completed</option>
+          </select>
+          <select
+            value={filterVisaType}
+            onChange={(e) => setFilterVisaType(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-lg"
+          >
+            <option value="all">All Visa Types</option>
+            {uniqueVisaTypes.map((visaType) => (
+              <option key={visaType} value={visaType}>{visaType}</option>
+            ))}
+          </select>
+          <select
+            value={filterProjectManager}
+            onChange={(e) => setFilterProjectManager(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-lg"
+          >
+            <option value="all">All Project Managers</option>
+            {uniqueProjectManagers.map((manager) => (
+              <option key={manager} value={manager}>{manager}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <div className="flex items-center gap-4">
