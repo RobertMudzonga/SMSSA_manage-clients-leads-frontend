@@ -4,6 +4,7 @@ import { API_BASE } from '@/lib/api';
 interface AuthContextValue {
   user: any | null;
   isAdmin: boolean;
+  isSuperAdmin: boolean;
   loading: boolean;
   login: (email: string, password: string) => Promise<{ error?: any }>;
   logout: () => Promise<void>;
@@ -21,9 +22,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const SUPER_ADMIN_EMAILS = ['munya@immigrationspecialists.co.za', 'robert@immigrationspecialists.co.za'];
+
   const computeIsAdmin = (u: any | null) => {
     if (!u || !u.email) return false;
     return u.email.toLowerCase().endsWith('@immigrationspecialists.co.za');
+  };
+
+  const computeIsSuperAdmin = (u: any | null) => {
+    if (!u || !u.email) return false;
+    return SUPER_ADMIN_EMAILS.includes(u.email.toLowerCase());
   };
 
   const login = async (email: string, password: string) => {
@@ -76,6 +84,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const value: AuthContextValue = {
     user,
     isAdmin: computeIsAdmin(user),
+    isSuperAdmin: computeIsSuperAdmin(user),
     loading,
     login,
     logout,
