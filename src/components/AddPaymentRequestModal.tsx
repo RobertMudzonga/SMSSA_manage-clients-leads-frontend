@@ -1,7 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { X } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+
+interface Employee {
+  id: number;
+  full_name: string;
+  work_email: string;
+}
 
 interface AddPaymentRequestModalProps {
   isOpen: boolean;
@@ -13,12 +19,36 @@ export default function AddPaymentRequestModal({ isOpen, onClose, onSubmit }: Ad
   const { toast } = useToast();
   const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [isLoadingEmployees, setIsLoadingEmployees] = useState(false);
   const [formData, setFormData] = useState({
+    requester_id: '',
     amount: '',
     description: '',
     due_date: '',
     is_urgent: false,
   });
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchEmployees();
+    }
+  }, [isOpen]);
+
+  const fetchEmployees = async () => {
+    setIsLoadingEmployees(true);
+    try {
+      const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000';
+      const response = await fetch(`${API_BASE}/api/employees`);
+      const data = await response.json();
+      setEmployees(data);
+    } catch (error) {
+      console.error('Error fetching employees:', error);
+      toast({ title: 'Failed to load employees', variant: 'destructive' });
+    } finally {
+      setIsLoadingEmployees(false);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -27,18 +57,20 @@ export default function AddPaymentRequestModal({ isOpen, onClose, onSubmit }: Ad
 
     if (isSubmitting) return;
 
-    if (!formData.amount || !formData.description || !formData.due_date) {
+    if (!formData.requester_id || !formData.amount || !formData.description || !formData.due_date) {
       toast({ title: 'Please fill all required fields', variant: 'destructive' });
       return;
     }
 
     setIsSubmitting(true);
     try {
+      const selectedEmployee = employees.find(e => e.id === parseInt(formData.requester_id));
       await Promise.resolve(onSubmit({
         ...formData,
+        requester_id: parseInt(formData.requester_id),
         requested_by: user?.user_id || null,
       }));
-      setFormData({ amount: '', description: '', due_date: '', is_urgent: false });
+      setFormData({ requester_id: '', amount: '', description: '', due_date: '', is_urgent: false });
       onClose();
     } catch (error: any) {
       console.error('Error adding payment request:', error);
@@ -59,6 +91,24 @@ export default function AddPaymentRequestModal({ isOpen, onClose, onSubmit }: Ad
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Requester *</label>
+            <select
+              required
+              value={formData.requester_id}
+              onChange={(e) => setFormData({ ...formData, requester_id: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+              disabled={isLoadingEmployees}
+            >
+              <option value="">Select an employee</option>
+              {employees.map((emp) => (
+                <option key={emp.id} value={emp.id}>
+                  {emp.full_name} ({emp.work_email})
+                </option>
+              ))}
+            </select>
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Amount (R) *</label>
             <input

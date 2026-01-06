@@ -19,8 +19,7 @@ export default function Sidebar({ activeTab, onTabChange, isOpen = false, onClos
     { id: 'templates', label: 'Templates', icon: '📝' },
     { id: 'analytics', label: 'Analytics', icon: '📈' },
     { id: 'client-portal', label: 'Client Portal', icon: '🔐' },
-    { id: 'database-health', label: 'Database Health', icon: '🔧' },
-    { id: 'leads', label: 'Leads', icon: '📋' } // Added Leads tab
+    { id: 'database-health', label: 'Database Health', icon: '🔧' }
   ];
 
   return (

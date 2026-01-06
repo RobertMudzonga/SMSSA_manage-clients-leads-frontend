@@ -9,8 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 interface PaymentRequest {
   payment_request_id: number;
   requested_by: number;
-  requested_by_name: string;
-  requested_by_email: string;
+  requester_name: string;
   amount: string;
   description: string;
   due_date: string;
@@ -202,7 +201,7 @@ export default function PaymentRequestsView({
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {pr.requested_by_name}
+                    {pr.requester_name}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {new Date(pr.due_date).toLocaleDateString()}
