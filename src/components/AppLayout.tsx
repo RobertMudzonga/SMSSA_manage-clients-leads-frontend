@@ -15,6 +15,7 @@ import DatabaseHealthDashboard from './DatabaseHealthDashboard';
 import { AnalyticsView } from './AnalyticsView';
 import ProjectView from './ProjectView';
 import LeadsView from './LeadsView';
+import PaymentRequestsView from './PaymentRequestsView';
 import { API_BASE } from '../lib/api';
 
 export default function AppLayout() {
@@ -29,6 +30,7 @@ export default function AppLayout() {
   const [goals, setGoals] = useState<any[]>([]);
   const [reviews, setReviews] = useState<any[]>([]);
   const [selectedProjectForChecklist, setSelectedProjectForChecklist] = useState<string | null>(null);
+  const [paymentRequests, setPaymentRequests] = useState<any[]>([]);
 
   useEffect(() => {
     loadData();
@@ -75,6 +77,15 @@ export default function AppLayout() {
       setEmployeesLoadError(String(err));
       employeesData = [];
     }
+    // Fetch payment requests
+    let paymentRequestsData = [];
+    try {
+      const r = await fetch(`${API_BASE}/payment-requests`);
+      paymentRequestsData = r.ok ? await r.json() : [];
+    } catch (err) {
+      console.error('Error fetching payment requests:', err);
+      paymentRequestsData = [];
+    }
     // For now, metrics/goals/reviews are loaded later or empty
     setProjects(projectsData || []);
     setDocuments([]);
@@ -82,6 +93,7 @@ export default function AppLayout() {
     setMetrics([]);
     setGoals([]);
     setReviews([]);
+    setPaymentRequests(paymentRequestsData || []);
   };
 
   const handleAddProspect = async (data: any) => {
@@ -415,6 +427,110 @@ export default function AppLayout() {
     }
   };
 
+  const handleAddPaymentRequest = async (data: any) => {
+    try {
+      const response = await fetch(`${API_BASE}/payment-requests`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+
+      if (response.ok) {
+        await loadData();
+        toast({ title: 'Payment request submitted' });
+        return;
+      }
+
+      const errorData = await response.json().catch(() => null);
+      console.error('Error adding payment request:', errorData);
+      throw new Error(errorData?.error || 'Failed to add payment request');
+    } catch (error: any) {
+      console.error('Error adding payment request:', error);
+      toast({ title: 'Failed to add payment request', description: error?.message, variant: 'destructive' });
+      throw error;
+    }
+  };
+
+  const handleApprovePaymentRequest = async (id: number) => {
+    try {
+      const response = await fetch(`${API_BASE}/payment-requests/${id}/approve`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ approved_by: user?.user_id }),
+      });
+
+      if (response.ok) {
+        await loadData();
+        toast({ title: 'Payment request approved' });
+      } else {
+        const errorData = await response.json().catch(() => null);
+        toast({ title: 'Failed to approve', description: errorData?.error, variant: 'destructive' });
+      }
+    } catch (error: any) {
+      console.error('Error approving payment request:', error);
+      toast({ title: 'Failed to approve', variant: 'destructive' });
+    }
+  };
+
+  const handleRejectPaymentRequest = async (id: number, reason: string) => {
+    try {
+      const response = await fetch(`${API_BASE}/payment-requests/${id}/reject`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ approved_by: user?.user_id, rejection_reason: reason }),
+      });
+
+      if (response.ok) {
+        await loadData();
+        toast({ title: 'Payment request rejected' });
+      } else {
+        const errorData = await response.json().catch(() => null);
+        toast({ title: 'Failed to reject', description: errorData?.error, variant: 'destructive' });
+      }
+    } catch (error: any) {
+      console.error('Error rejecting payment request:', error);
+      toast({ title: 'Failed to reject', variant: 'destructive' });
+    }
+  };
+
+  const handleMarkPaymentPaid = async (id: number) => {
+    try {
+      const response = await fetch(`${API_BASE}/payment-requests/${id}/mark-paid`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ paid_by: user?.user_id }),
+      });
+
+      if (response.ok) {
+        await loadData();
+        toast({ title: 'Payment marked as paid' });
+      } else {
+        const errorData = await response.json().catch(() => null);
+        toast({ title: 'Failed to mark as paid', description: errorData?.error, variant: 'destructive' });
+      }
+    } catch (error: any) {
+      console.error('Error marking payment as paid:', error);
+      toast({ title: 'Failed to mark as paid', variant: 'destructive' });
+    }
+  };
+
+  const handleDeletePaymentRequest = async (id: number) => {
+    try {
+      const response = await fetch(`${API_BASE}/payment-requests/${id}`, { method: 'DELETE' });
+
+      if (response.ok) {
+        await loadData();
+        toast({ title: 'Payment request deleted' });
+      } else {
+        const errorData = await response.json().catch(() => null);
+        toast({ title: 'Failed to delete', description: errorData?.error, variant: 'destructive' });
+      }
+    } catch (error: any) {
+      console.error('Error deleting payment request:', error);
+      toast({ title: 'Failed to delete', variant: 'destructive' });
+    }
+  };
+
   const stats = {
     totalProspects: prospects.length,
     activeProjects: projects.filter(p => {
@@ -518,6 +634,16 @@ export default function AppLayout() {
         {activeTab === 'client-portal' && <ClientPortalView clientData={clientData} />}
         {activeTab === 'database-health' && <DatabaseHealthDashboard />}
         {activeTab === 'leads' && <LeadsView />}
+        {activeTab === 'payment-requests' && (
+          <PaymentRequestsView
+            paymentRequests={paymentRequests}
+            onAddPaymentRequest={handleAddPaymentRequest}
+            onApprove={handleApprovePaymentRequest}
+            onReject={handleRejectPaymentRequest}
+            onMarkPaid={handleMarkPaymentPaid}
+            onDelete={handleDeletePaymentRequest}
+          />
+        )}
       </div>
     </div>
   );

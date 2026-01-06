@@ -10,9 +10,11 @@ interface SidebarProps {
 export default function Sidebar({ activeTab, onTabChange, isOpen = false, onClose }: SidebarProps) {
   const tabs = [
     { id: 'dashboard', label: 'Dashboard', icon: '📊' },
+    { id: 'leads', label: 'Leads', icon: '🎯' },
     { id: 'prospects', label: 'Prospects', icon: '👥' },
     { id: 'projects', label: 'Projects', icon: '📁' },
     { id: 'employees', label: 'Employees', icon: '👔' },
+    { id: 'payment-requests', label: 'Payment Requests', icon: '💳' },
     { id: 'documents', label: 'Documents', icon: '📄' },
     { id: 'templates', label: 'Templates', icon: '📝' },
     { id: 'analytics', label: 'Analytics', icon: '📈' },
