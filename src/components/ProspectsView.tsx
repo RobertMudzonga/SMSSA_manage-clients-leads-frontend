@@ -280,10 +280,7 @@ export default function ProspectsView({
       <AddProspectModal 
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
-        onSubmit={(data) => {
-          onAddProspect(data);
-          setIsAddModalOpen(false);
-        }}
+        onSubmit={onAddProspect}
       />
 
       <ProspectDetailModal
