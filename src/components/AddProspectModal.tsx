@@ -10,6 +10,7 @@ interface AddProspectModalProps {
 
 export default function AddProspectModal({ isOpen, onClose, onSubmit }: AddProspectModalProps) {
   const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -24,6 +25,9 @@ export default function AddProspectModal({ isOpen, onClose, onSubmit }: AddProsp
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (isSubmitting) return; // Prevent double submission
+    
+    setIsSubmitting(true);
     try {
       await Promise.resolve(onSubmit(formData));
       setFormData({ name: '', email: '', phone: '', lead_source: '', pipeline_stage: 'opportunity', notes: '' });
@@ -31,6 +35,8 @@ export default function AddProspectModal({ isOpen, onClose, onSubmit }: AddProsp
     } catch (error: any) {
       console.error('Error adding prospect:', error);
       toast({ title: 'Failed to add prospect', description: error?.message || 'Unknown error', variant: 'destructive' });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -114,9 +120,10 @@ export default function AddProspectModal({ isOpen, onClose, onSubmit }: AddProsp
             </button>
             <button
               type="submit"
-              className="flex-1 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700"
+              disabled={isSubmitting}
+              className="flex-1 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Add Prospect
+              {isSubmitting ? 'Adding...' : 'Add Prospect'}
             </button>
           </div>
         </form>

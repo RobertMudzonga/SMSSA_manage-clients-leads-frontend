@@ -85,7 +85,9 @@ export default function AppLayout() {
   };
 
   const handleAddProspect = async (data: any) => {
+    console.log('[handleAddProspect] Called with data:', data);
     try {
+      console.log('[handleAddProspect] Sending POST to:', `${API_BASE}/prospects`);
       const response = await fetch(`${API_BASE}/prospects`, {
         method: 'POST',
         headers: {
@@ -94,8 +96,10 @@ export default function AppLayout() {
         body: JSON.stringify(data),
       });
 
+      console.log('[handleAddProspect] Response status:', response.status);
       if (response.ok) {
         await loadData();
+        console.log('[handleAddProspect] Successfully added prospect');
         return;
       }
 
