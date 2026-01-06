@@ -1,12 +1,11 @@
 import { useState } from 'react';
-import { API_BASE } from '../lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { X } from 'lucide-react';
 
 interface AddProspectModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: any) => void;
+  onSubmit: (data: any) => Promise<void> | void;
 }
 
 export default function AddProspectModal({ isOpen, onClose, onSubmit }: AddProspectModalProps) {
@@ -26,26 +25,12 @@ export default function AddProspectModal({ isOpen, onClose, onSubmit }: AddProsp
     e.preventDefault();
 
     try {
-      const response = await fetch(`${API_BASE}/prospects`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to add prospect');
-      }
-
-      const newProspect = await response.json();
-      onSubmit(newProspect);
+      await Promise.resolve(onSubmit(formData));
       setFormData({ name: '', email: '', phone: '', lead_source: '', pipeline_stage: 'opportunity', notes: '' });
       onClose();
     } catch (error: any) {
       console.error('Error adding prospect:', error);
-      toast({ title: 'Failed to add prospect', description: error.message || 'Unknown error', variant: 'destructive' });
+      toast({ title: 'Failed to add prospect', description: error?.message || 'Unknown error', variant: 'destructive' });
     }
   };
 

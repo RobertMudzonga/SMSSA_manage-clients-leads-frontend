@@ -95,15 +95,17 @@ export default function AppLayout() {
       });
 
       if (response.ok) {
-        loadData();
-      } else {
-        const errorData = await response.json();
-        console.error('Error adding prospect:', errorData);
-        toast({ title: 'Failed to add prospect', description: errorData.error || 'Unknown error', variant: 'destructive' });
+        await loadData();
+        return;
       }
-    } catch (error) {
+
+      const errorData = await response.json().catch(() => null);
+      console.error('Error adding prospect:', errorData);
+      throw new Error(errorData?.error || 'Failed to add prospect');
+    } catch (error: any) {
       console.error('Error adding prospect:', error);
-      toast({ title: 'Failed to add prospect', description: 'Please check your connection.', variant: 'destructive' });
+      toast({ title: 'Failed to add prospect', description: error?.message || 'Please check your connection.', variant: 'destructive' });
+      throw error; // allow modal to catch and show toast
     }
   };
 
