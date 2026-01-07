@@ -6,6 +6,7 @@ import { Badge } from './ui/badge';
 import { Checkbox } from './ui/checkbox';
 import DocumentChecklistView from './DocumentChecklistView';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface ProjectViewProps {
   projectId: string;
@@ -16,6 +17,9 @@ export default function ProjectView({ projectId, onClose }: ProjectViewProps) {
   const [project, setProject] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [stage, setStage] = useState<number>(1);
+  const [showChecklist, setShowChecklist] = useState<boolean>(false);
+  const [reviews, setReviews] = useState<any[]>([]);
+  const { user, isAdmin } = useAuth();
 
   // Submission stage state
   const [supervisorReviewed, setSupervisorReviewed] = useState(false);
@@ -35,6 +39,7 @@ export default function ProjectView({ projectId, onClose }: ProjectViewProps) {
 
   useEffect(() => {
     loadProject();
+    loadReviews();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
@@ -64,6 +69,16 @@ export default function ProjectView({ projectId, onClose }: ProjectViewProps) {
       console.error('Failed to load project', err);
     }
     setLoading(false);
+  };
+
+  const loadReviews = async () => {
+    try {
+      const res = await fetch(`/api/projects/${projectId}/reviews`);
+      const json = await res.json().catch(() => ({ reviews: [] }));
+      if (json && json.reviews) setReviews(json.reviews);
+    } catch (err) {
+      console.warn('Failed to load reviews:', err);
+    }
   };
 
   const updateProjectStage = async (nextStage: number) => {
@@ -224,6 +239,7 @@ export default function ProjectView({ projectId, onClose }: ProjectViewProps) {
           <p className="text-sm text-gray-600">Client: {project?.client_name}</p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setShowChecklist(true)}>Checklist</Button>
           <Button variant="destructive" onClick={async () => {
             if (!confirm('Delete this project? This action cannot be undone.')) return;
             try {
@@ -375,6 +391,16 @@ export default function ProjectView({ projectId, onClose }: ProjectViewProps) {
         </Card>
 
         <div className="md:col-span-2 space-y-4">
+          {showChecklist && (
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-semibold">Document Checklist</h3>
+                <Button variant="outline" onClick={() => setShowChecklist(false)}>Back to Details</Button>
+              </div>
+              <DocumentChecklistView projectId={projectId} onClose={() => setShowChecklist(false)} />
+            </div>
+          )}
+
           {stage === 2 && (
             <DocumentChecklistView projectId={projectId} onClose={() => { /* noop - handled by parent */ }} />
           )}
@@ -404,6 +430,134 @@ export default function ProjectView({ projectId, onClose }: ProjectViewProps) {
             <Card className="p-4">
               <h3 className="font-semibold">Summary</h3>
               <pre className="text-xs mt-2 bg-gray-50 p-2 rounded">{JSON.stringify(project, null, 2)}</pre>
+            </Card>
+          )}
+
+          {isAdmin && (
+            <Card className="p-4">
+              <h3 className="font-semibold mb-2">Edit Project Details (Internal)</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-sm">Project Name</label>
+                  <input className="w-full p-2 border rounded" value={project?.project_name || ''} onChange={(e) => setProject({ ...project, project_name: e.target.value })} />
+                </div>
+                <div>
+                  <label className="text-sm">Client Name</label>
+                  <input className="w-full p-2 border rounded" value={project?.client_name || ''} onChange={(e) => setProject({ ...project, client_name: e.target.value })} />
+                </div>
+                <div>
+                  <label className="text-sm">Client Email</label>
+                  <input className="w-full p-2 border rounded" value={project?.client_email || ''} onChange={(e) => setProject({ ...project, client_email: e.target.value })} />
+                </div>
+                <div>
+                  <label className="text-sm">Case Type</label>
+                  <input className="w-full p-2 border rounded" value={project?.case_type || ''} onChange={(e) => setProject({ ...project, case_type: e.target.value })} />
+                </div>
+                <div>
+                  <label className="text-sm">Priority</label>
+                  <input className="w-full p-2 border rounded" value={project?.priority || ''} onChange={(e) => setProject({ ...project, priority: e.target.value })} />
+                </div>
+                <div>
+                  <label className="text-sm">Start Date</label>
+                  <input type="date" className="w-full p-2 border rounded" value={formatForDateInput(project?.start_date || '')} onChange={(e) => setProject({ ...project, start_date: e.target.value })} />
+                </div>
+                <div>
+                  <label className="text-sm">Payment Amount</label>
+                  <input type="number" step="0.01" className="w-full p-2 border rounded" value={project?.payment_amount || ''} onChange={(e) => setProject({ ...project, payment_amount: e.target.value })} />
+                </div>
+                <div>
+                  <label className="text-sm">Status</label>
+                  <input className="w-full p-2 border rounded" value={project?.status || ''} onChange={(e) => setProject({ ...project, status: e.target.value })} />
+                </div>
+              </div>
+              <div className="mt-3">
+                <Button onClick={async () => {
+                  try {
+                    const headers: Record<string,string> = { 'Content-Type': 'application/json' };
+                    const email = user?.email || window.localStorage.getItem('userEmail');
+                    if (email) headers['x-user-email'] = email;
+                    const payload: any = {
+                      project_name: project?.project_name,
+                      client_name: project?.client_name,
+                      client_email: project?.client_email,
+                      case_type: project?.case_type,
+                      priority: project?.priority,
+                      start_date: project?.start_date,
+                      payment_amount: project?.payment_amount,
+                      status: project?.status,
+                    };
+                    const res = await fetch(`/api/projects/${projectId}`, { method: 'PATCH', headers, body: JSON.stringify(payload) });
+                    if (!res.ok) {
+                      const txt = await res.text();
+                      console.error('Project update failed', res.status, txt);
+                      toast({ title: 'Update failed', description: 'Unable to save project details', variant: 'destructive' });
+                      return;
+                    }
+                    toast({ title: 'Project details updated' });
+                    loadProject();
+                  } catch (err) {
+                    console.error('Project update error', err);
+                    toast({ title: 'Update failed', description: String(err), variant: 'destructive' });
+                  }
+                }}>Save Changes</Button>
+              </div>
+            </Card>
+          )}
+
+          {isAdmin && (
+            <Card className="p-4">
+              <h3 className="font-semibold mb-2">Supervisor Review (Internal)</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-sm">Project Health</label>
+                  <select className="w-full p-2 border rounded" value={(submissionDetails as any)?.health_status || ''} onChange={(e) => setSubmissionDetails({ ...submissionDetails, health_status: e.target.value })}>
+                    <option value="">Select...</option>
+                    <option value="Green">Green</option>
+                    <option value="Amber">Amber</option>
+                    <option value="Red">Red</option>
+                  </select>
+                </div>
+                <div className="md:col-span-2">
+                  <label className="text-sm">Comment</label>
+                  <textarea className="w-full p-2 border rounded" rows={3} value={(submissionDetails as any)?.review_comment || ''} onChange={(e) => setSubmissionDetails({ ...submissionDetails, review_comment: e.target.value })} />
+                </div>
+              </div>
+              <div className="mt-3 flex gap-2">
+                <Button onClick={async () => {
+                  try {
+                    const headers: Record<string,string> = { 'Content-Type': 'application/json' };
+                    const email = user?.email || window.localStorage.getItem('userEmail');
+                    if (email) headers['x-user-email'] = email;
+                    const body = { health_status: (submissionDetails as any)?.health_status || null, comment: (submissionDetails as any)?.review_comment || '' };
+                    const res = await fetch(`/api/projects/${projectId}/reviews`, { method: 'POST', headers, body: JSON.stringify(body) });
+                    if (!res.ok) {
+                      const txt = await res.text();
+                      console.error('Add review failed', res.status, txt);
+                      toast({ title: 'Review failed', description: 'Unable to save review', variant: 'destructive' });
+                      return;
+                    }
+                    toast({ title: 'Review added' });
+                    setSubmissionDetails({ ...submissionDetails, health_status: '', review_comment: '' });
+                    loadReviews();
+                  } catch (err) {
+                    console.error('Add review error', err);
+                    toast({ title: 'Review failed', description: String(err), variant: 'destructive' });
+                  }
+                }}>Save Review</Button>
+              </div>
+              <div className="mt-4">
+                <h4 className="font-semibold mb-2">Recent Reviews</h4>
+                <div className="space-y-2">
+                  {reviews.map((r, idx) => (
+                    <div key={idx} className="p-2 border rounded">
+                      <div className="text-sm text-gray-600">{new Date(r.created_at).toLocaleString()} • {r.reviewer_email}</div>
+                      <div className="text-sm">Health: {r.health_status || 'N/A'}</div>
+                      <div className="text-sm">{r.comment}</div>
+                    </div>
+                  ))}
+                  {reviews.length === 0 && (<div className="text-sm text-gray-500">No reviews yet.</div>)}
+                </div>
+              </div>
             </Card>
           )}
         </div>
