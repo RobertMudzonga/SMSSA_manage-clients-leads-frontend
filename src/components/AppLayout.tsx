@@ -302,7 +302,7 @@ export default function AppLayout() {
   const handleCreateProject = async (data: any) => {
     try {
       const storedEmail = window.localStorage.getItem('userEmail') || '';
-      const res = await fetch(`${API_BASE}/projects/create`, {
+      const res = await fetch(`${API_BASE}/projects`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-user-email': storedEmail },
         body: JSON.stringify(data)
@@ -313,7 +313,8 @@ export default function AppLayout() {
         toast({ title: 'Failed to create project', description: txt, variant: 'destructive' });
         return;
       }
-      loadData();
+      await loadData();
+      toast({ title: 'Project created successfully' });
     } catch (err) {
       console.error('Error creating project via backend:', err);
       toast({ title: 'Failed to create project', description: String(err), variant: 'destructive' });
