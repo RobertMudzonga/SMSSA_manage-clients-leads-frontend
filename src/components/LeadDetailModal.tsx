@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { X, MessageSquare, Trash2, Archive, Calendar, Mail, Phone, Building } from 'lucide-react';
+import { X, MessageSquare, Trash2, Archive, Calendar, Mail, Phone, Building, UserPlus } from 'lucide-react';
 import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
 interface LeadDetailModalProps {
   lead: any;
@@ -10,6 +11,8 @@ interface LeadDetailModalProps {
   onAddComment: (leadId: number, comment: string) => void;
   onMarkLost: (leadId: number, reason: string) => void;
   onDelete: (leadId: number) => void;
+  onAssignEmployee?: (leadId: number, employeeId: number) => void;
+  employees?: any[];
 }
 
 export default function LeadDetailModal({
@@ -18,12 +21,15 @@ export default function LeadDetailModal({
   onClose,
   onAddComment,
   onMarkLost,
-  onDelete
+  onDelete,
+  onAssignEmployee,
+  employees = []
 }: LeadDetailModalProps) {
   const [comment, setComment] = useState('');
   const [lostReason, setLostReason] = useState('');
   const [showLostDialog, setShowLostDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>('');
 
   if (!isOpen || !lead) return null;
 
@@ -47,6 +53,13 @@ export default function LeadDetailModal({
     onDelete(lead.lead_id);
     setShowDeleteDialog(false);
     onClose();
+  };
+
+  const handleAssignEmployee = () => {
+    if (selectedEmployeeId && onAssignEmployee) {
+      onAssignEmployee(lead.lead_id, parseInt(selectedEmployeeId));
+      setSelectedEmployeeId('');
+    }
   };
 
   return (
@@ -95,6 +108,13 @@ export default function LeadDetailModal({
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
+                <UserPlus className="w-4 h-4 inline mr-1" />
+                Assigned To
+              </label>
+              <p className="text-gray-900">{lead.assigned_to_name || 'Unassigned'}</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 <Calendar className="w-4 h-4 inline mr-1" />
                 Created
               </label>
@@ -111,6 +131,37 @@ export default function LeadDetailModal({
               </p>
             </div>
           </div>
+
+          {/* Employee Assignment Section */}
+          {onAssignEmployee && employees.length > 0 && (
+            <div className="border-t pt-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Assign to Salesperson
+              </label>
+              <div className="flex gap-2">
+                <Select value={selectedEmployeeId} onValueChange={setSelectedEmployeeId}>
+                  <SelectTrigger className="flex-1">
+                    <SelectValue placeholder="Select a salesperson" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {employees.filter(emp => emp.is_active).map((employee) => (
+                      <SelectItem key={employee.id} value={employee.id.toString()}>
+                        {employee.full_name} - {employee.job_position}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button 
+                  onClick={handleAssignEmployee} 
+                  disabled={!selectedEmployeeId}
+                  className="whitespace-nowrap"
+                >
+                  <UserPlus className="w-4 h-4 mr-2" />
+                  Assign
+                </Button>
+              </div>
+            </div>
+          )}
 
           {/* Notes/History */}
           {lead.notes && (

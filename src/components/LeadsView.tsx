@@ -85,6 +85,7 @@ const ColdLeadCard = ({ lead, onDragStart, onAdvanceStage, onClick }) => {
  */
 export default function ColdLeadsKanbanApp() {
     const [leads, setLeads] = useState([]);
+    const [employees, setEmployees] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
     const [toast, setToast] = useState(null);
@@ -116,9 +117,22 @@ export default function ColdLeadsKanbanApp() {
         }
     }, []);
 
+    const fetchEmployees = useCallback(async () => {
+        try {
+            const response = await fetch(`${API_BASE}/employees`);
+            if (response.ok) {
+                const data = await response.json();
+                setEmployees(data);
+            }
+        } catch (err) {
+            console.error('Error fetching employees:', err);
+        }
+    }, []);
+
     useEffect(() => {
         fetchLeads();
-    }, [fetchLeads]);
+        fetchEmployees();
+    }, [fetchLeads, fetchEmployees]);
 
     // --- Data Grouping ---
     const leadsByStage = useMemo(() => {
@@ -294,6 +308,41 @@ export default function ColdLeadsKanbanApp() {
         }
     };
 
+    const handleAssignEmployee = async (leadId, employeeId) => {
+        try {
+            const response = await fetch(`${API_BASE}/leads/${leadId}/assign`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ employee_id: employeeId }),
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to assign lead');
+            }
+
+            const result = await response.json();
+            
+            // Update the lead in state with new assignment info
+            setLeads(prevLeads =>
+                prevLeads.map(l => 
+                    l.lead_id === leadId 
+                        ? { ...l, assigned_employee_id: employeeId, assigned_to_name: result.assigned_to } 
+                        : l
+                )
+            );
+            
+            // Also update selected lead if it's the one we just assigned
+            if (selectedLead && selectedLead.lead_id === leadId) {
+                setSelectedLead({ ...selectedLead, assigned_employee_id: employeeId, assigned_to_name: result.assigned_to });
+            }
+            
+            showToast(`Lead assigned to ${result.assigned_to}`, 'success');
+        } catch (err) {
+            console.error('Error assigning lead:', err);
+            showToast('Failed to assign lead', 'error');
+        }
+    };
+
     // --- Loading and Error States ---
     if (isLoading) {
         return (
@@ -383,6 +432,8 @@ export default function ColdLeadsKanbanApp() {
                 onAddComment={handleAddComment}
                 onMarkLost={handleMarkLost}
                 onDelete={handleDeleteLead}
+                onAssignEmployee={handleAssignEmployee}
+                employees={employees}
             />
 
         </div>

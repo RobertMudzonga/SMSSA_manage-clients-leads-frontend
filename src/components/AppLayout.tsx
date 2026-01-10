@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { NotificationProvider } from '@/contexts/NotificationContext';
+import { NotificationBell } from './NotificationBell';
 import Sidebar from './Sidebar';
 import DashboardView from './DashboardView';
 import ProspectsView from './ProspectsView';
@@ -554,29 +556,31 @@ export default function AppLayout() {
   };
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
-      <Sidebar activeTab={activeTab} onTabChange={setActiveTab} isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
-      <div className="md:ml-64 flex-1 p-4 md:p-8">
-        {/* Mobile top bar */}
-        <div className="md:hidden flex items-center justify-between mb-4">
-          <button onClick={() => setIsSidebarOpen(true)} className="px-3 py-2 bg-white rounded shadow">
-            ☰
-          </button>
-          <h1 className="text-lg font-semibold">ImmigratePro</h1>
-          <div />
-        </div>
+    <NotificationProvider employeeId={user?.employee_id}>
+      <div className="flex min-h-screen bg-gray-50">
+        <Sidebar activeTab={activeTab} onTabChange={setActiveTab} isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+        <div className="md:ml-64 flex-1 p-4 md:p-8">
+          {/* Mobile top bar */}
+          <div className="md:hidden flex items-center justify-between mb-4">
+            <button onClick={() => setIsSidebarOpen(true)} className="px-3 py-2 bg-white rounded shadow">
+              ☰
+            </button>
+            <h1 className="text-lg font-semibold">ImmigratePro</h1>
+            <NotificationBell employeeId={user?.employee_id} />
+          </div>
 
-        {/* Desktop header actions */}
-        <div className="hidden md:flex items-center justify-end gap-3 mb-4">
-          {user ? (
-            <>
-              <div className="text-sm text-gray-700">{user.email}</div>
-              <button onClick={async () => { await logout(); toast({ title: 'Logged out' }); navigate('/login'); }} className="px-3 py-1 bg-white border rounded">Sign out</button>
-            </>
-          ) : (
-            <button onClick={() => navigate('/login')} className="px-3 py-1 bg-white border rounded">Sign in</button>
-          )}
-        </div>
+          {/* Desktop header actions */}
+          <div className="hidden md:flex items-center justify-end gap-3 mb-4">
+            {user ? (
+              <>
+                <NotificationBell employeeId={user?.employee_id} />
+                <div className="text-sm text-gray-700">{user.email}</div>
+                <button onClick={async () => { await logout(); toast({ title: 'Logged out' }); navigate('/login'); }} className="px-3 py-1 bg-white border rounded">Sign out</button>
+              </>
+            ) : (
+              <button onClick={() => navigate('/login')} className="px-3 py-1 bg-white border rounded">Sign in</button>
+            )}
+          </div>
         {employeesLoadError && (
           <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-800 rounded flex items-center justify-between">
             <div>
@@ -647,5 +651,6 @@ export default function AppLayout() {
         )}
       </div>
     </div>
+    </NotificationProvider>
   );
 }
