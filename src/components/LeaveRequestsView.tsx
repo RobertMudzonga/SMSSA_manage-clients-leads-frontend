@@ -109,6 +109,33 @@ export default function LeaveRequestsView() {
     }
   };
 
+  const deleteLeaveRequest = async (requestId: string) => {
+    if (!confirm('Are you sure you want to delete this leave request?')) {
+      return;
+    }
+
+    try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      const email = user?.email || window.localStorage.getItem('userEmail');
+      if (email) headers['x-user-email'] = email;
+
+      const res = await fetch(`${API_BASE}/leave-requests/${requestId}`, {
+        method: 'DELETE',
+        headers
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to delete leave request');
+      }
+
+      toast({ title: 'Leave request deleted' });
+      loadLeaveRequests();
+    } catch (err) {
+      console.error('Error deleting leave request:', err);
+      toast({ title: 'Error', description: String(err), variant: 'destructive' });
+    }
+  };
+
   const getStatusBadgeColor = (status?: string) => {
     switch ((status || '').toLowerCase()) {
       case 'approved':
@@ -264,24 +291,34 @@ export default function LeaveRequestsView() {
                 </div>
               )}
 
-              {isAdmin && (request.status || '').toLowerCase() === 'pending' && (
-                <div className="flex gap-2 mt-4">
-                  <Button
-                    size="sm"
-                    className="bg-green-600 hover:bg-green-700"
-                    onClick={() => updateLeaveRequestStatus(request.id || request.request_id || '', 'approved')}
-                  >
-                    Approve
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    onClick={() => updateLeaveRequestStatus(request.id || request.request_id || '', 'rejected')}
-                  >
-                    Reject
-                  </Button>
-                </div>
-              )}
+              <div className="flex gap-2 mt-4">
+                {isAdmin && (request.status || '').toLowerCase() === 'pending' && (
+                  <>
+                    <Button
+                      size="sm"
+                      className="bg-green-600 hover:bg-green-700"
+                      onClick={() => updateLeaveRequestStatus(request.id || request.request_id || '', 'approved')}
+                    >
+                      Approve
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => updateLeaveRequestStatus(request.id || request.request_id || '', 'rejected')}
+                    >
+                      Reject
+                    </Button>
+                  </>
+                )}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="ml-auto"
+                  onClick={() => deleteLeaveRequest(request.id || request.request_id || '')}
+                >
+                  Delete
+                </Button>
+              </div>
             </Card>
           ))
         )}
