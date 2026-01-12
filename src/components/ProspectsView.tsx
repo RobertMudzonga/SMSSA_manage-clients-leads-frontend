@@ -6,6 +6,7 @@ import PipelineStats from './PipelineStats';
 import AddProspectModal from './AddProspectModal';
 import ProspectDetailModal from './ProspectDetailModal';
 import { LayoutGrid, List } from 'lucide-react';
+import { API_BASE } from '../lib/api';
 
 interface ProspectsViewProps {
   prospects: any[];
@@ -17,6 +18,14 @@ interface ProspectsViewProps {
   onMarkProspectLost?: (id: string, reason?: string) => void;
   onSetProspectTags?: (id: string, tagIds: number[]) => void;
   onOpenProject?: (projectId: string) => void;
+}
+
+interface Employee {
+  employee_id?: number;
+  id?: number;
+  first_name?: string;
+  last_name?: string;
+  full_name?: string;
 }
 
 const PIPELINE_STAGES = [
@@ -52,10 +61,30 @@ export default function ProspectsView({
   const [selectedProspect, setSelectedProspect] = useState<any>(null);
   const [viewMode, setViewMode] = useState<'pipeline' | 'list'>('pipeline');
   const [autoMode, setAutoMode] = useState(true); // if true, auto-switch based on viewport width
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [selectedSalesperson, setSelectedSalesperson] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [importPreviewOpen, setImportPreviewOpen] = useState(false);
   const [importPreviewRows, setImportPreviewRows] = useState<any[]>([]);
   const [importingFile, setImportingFile] = useState<File | null>(null);
+
+  useEffect(() => {
+    loadEmployees();
+  }, []);
+
+  const loadEmployees = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/employees`);
+      const data = res.ok ? await res.json() : [];
+      setEmployees(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error('Error loading employees:', err);
+    }
+  };
+
+  const filteredProspects = selectedSalesperson
+    ? prospects.filter(p => p.assigned_to === selectedSalesperson)
+    : prospects;
 
   function exportToCsv(filename: string, rows: any[]) {
     if (!rows || rows.length === 0) {
@@ -142,89 +171,111 @@ export default function ProspectsView({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-gray-900">Sales Pipeline</h2>
-        <div className="flex items-center gap-3">
-          <div className="flex bg-gray-100 rounded-lg p-1">
-            <button
-              onClick={() => { setViewMode('pipeline'); setAutoMode(false); }}
-              className={`px-3 py-1 rounded ${viewMode === 'pipeline' ? 'bg-white shadow' : ''}`}
-            >
-              <LayoutGrid className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => { setViewMode('list'); setAutoMode(false); }}
-              className={`px-3 py-1 rounded ${viewMode === 'list' ? 'bg-white shadow' : ''}`}
-            >
-              <List className="w-4 h-4" />
-            </button>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => exportToCsv('prospects.csv', prospects)}
-              className="px-3 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300"
-            >
-              Export
-            </button>
-            <input
-              type="file"
-              accept=".xlsx,.xls,.csv"
-              style={{ display: 'none' }}
-              ref={fileInputRef}
-              onChange={async (e) => {
-                const f = e.target.files?.[0];
-                if (!f) return;
-                setImportingFile(f);
-                // First perform a dry-run to preview mapping
-                const fd = new FormData();
-                fd.append('file', f);
-                fd.append('target', 'prospects');
-                fd.append('dryRun', 'true');
-                try {
-                  const res = await fetch('/api/import', { method: 'POST', body: fd });
-                  let json;
-                  const ct = res.headers.get('content-type') || '';
-                  if (ct.includes('application/json')) {
-                    json = await res.json();
-                  } else {
-                    const txt = await res.text();
-                    try { json = JSON.parse(txt); } catch { json = { error: txt }; }
-                  }
-                  if (res.ok && json && json.result && json.result.mappedRows) {
-                    // pick the first sheet key
-                    const sheetKeys = Object.keys(json.result.mappedRows);
-                    if (sheetKeys.length > 0) {
-                      const mapped = json.result.mappedRows[sheetKeys[0]].prospects || [];
-                      setImportPreviewRows(mapped || []);
-                      setImportPreviewOpen(true);
-                    } else {
-                      toast({ title: 'No mapped rows returned', variant: 'destructive' });
-                    }
-                  } else {
-                    toast({ title: 'Dry-run failed', description: json.error || 'Server error', variant: 'destructive' });
-                  }
-                } catch (err) {
-                  console.error(err);
-                  toast({ title: 'Dry-run failed', variant: 'destructive' });
-                }
-                (e.target as HTMLInputElement).value = '';
-              }}
-            />
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="px-3 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300"
-            >
-              Import
-            </button>
-            <button 
-              onClick={() => setIsAddModalOpen(true)}
-              className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700"
-            >
-              Add Prospect
-            </button>
-          </div>
-        </div>
       </div>
 
-      <PipelineStats prospects={prospects} />
+      <PipelineStats prospects={filteredProspects} />
+
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="flex bg-gray-100 rounded-lg p-1">
+          <button
+            onClick={() => { setViewMode('pipeline'); setAutoMode(false); }}
+            className={`px-3 py-1 rounded ${viewMode === 'pipeline' ? 'bg-white shadow' : ''}`}
+          >
+            <LayoutGrid className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => { setViewMode('list'); setAutoMode(false); }}
+            className={`px-3 py-1 rounded ${viewMode === 'list' ? 'bg-white shadow' : ''}`}
+          >
+            <List className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="flex gap-2 items-center flex-wrap">
+          <label className="text-sm font-medium text-gray-700">Filter by Salesperson:</label>
+          <select
+            value={selectedSalesperson || ''}
+            onChange={(e) => setSelectedSalesperson(e.target.value ? parseInt(e.target.value) : null)}
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+          >
+            <option value="">All Salespersons</option>
+            {employees.map(emp => {
+              const empId = emp.employee_id || emp.id;
+              const empName = emp.full_name || `${emp.first_name || ''} ${emp.last_name || ''}`.trim();
+              return (
+                <option key={empId} value={empId}>
+                  {empName}
+                </option>
+              );
+            })}
+          </select>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => exportToCsv('prospects.csv', filteredProspects)}
+            className="px-3 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300"
+          >
+            Export
+          </button>
+          <input
+            type="file"
+            accept=".xlsx,.xls,.csv"
+            style={{ display: 'none' }}
+            ref={fileInputRef}
+            onChange={async (e) => {
+              const f = e.target.files?.[0];
+              if (!f) return;
+              setImportingFile(f);
+              // First perform a dry-run to preview mapping
+              const fd = new FormData();
+              fd.append('file', f);
+              fd.append('target', 'prospects');
+              fd.append('dryRun', 'true');
+              try {
+                const res = await fetch('/api/import', { method: 'POST', body: fd });
+                let json;
+                const ct = res.headers.get('content-type') || '';
+                if (ct.includes('application/json')) {
+                  json = await res.json();
+                } else {
+                  const txt = await res.text();
+                  try { json = JSON.parse(txt); } catch { json = { error: txt }; }
+                }
+                if (res.ok && json && json.result && json.result.mappedRows) {
+                  // pick the first sheet key
+                  const sheetKeys = Object.keys(json.result.mappedRows);
+                  if (sheetKeys.length > 0) {
+                    const mapped = json.result.mappedRows[sheetKeys[0]].prospects || [];
+                    setImportPreviewRows(mapped || []);
+                    setImportPreviewOpen(true);
+                  } else {
+                    toast({ title: 'No mapped rows returned', variant: 'destructive' });
+                  }
+                } else {
+                  toast({ title: 'Dry-run failed', description: json.error || 'Server error', variant: 'destructive' });
+                }
+              } catch (err) {
+                console.error(err);
+                toast({ title: 'Dry-run failed', variant: 'destructive' });
+              }
+              (e.target as HTMLInputElement).value = '';
+            }}
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="px-3 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300"
+          >
+            Import
+          </button>
+          <button 
+            onClick={() => setIsAddModalOpen(true)}
+            className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700"
+          >
+            Add Prospect
+          </button>
+        </div>
+      </div>
 
       {viewMode === 'pipeline' ? (
 
@@ -235,7 +286,7 @@ export default function ProspectsView({
                 key={stage.key}
                 stage={stage.key}
                 title={stage.label}
-                prospects={prospects}
+                prospects={filteredProspects}
                 onProspectClick={setSelectedProspect}
                 onMoveStage={wrappedMoveStage}
               />
@@ -255,7 +306,7 @@ export default function ProspectsView({
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {prospects.map(p => (
+              {filteredProspects.map(p => (
                   <tr key={p.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900" onClick={() => setSelectedProspect(p)}>{p.name}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500" onClick={() => setSelectedProspect(p)}>

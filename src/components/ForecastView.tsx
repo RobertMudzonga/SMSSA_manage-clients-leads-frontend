@@ -17,18 +17,30 @@ interface ForecastProspect {
   forecast_probability?: number;
   status?: string;
   current_stage?: string;
+  assigned_to?: number;
+}
+
+interface Employee {
+  employee_id?: number;
+  id?: number;
+  first_name?: string;
+  last_name?: string;
+  full_name?: string;
 }
 
 export default function ForecastView() {
   const [prospects, setProspects] = useState<ForecastProspect[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'monthly' | 'weekly'>('monthly');
+  const [selectedSalesperson, setSelectedSalesperson] = useState<number | null>(null);
   const [selectedMonth, setSelectedMonth] = useState<string>('');
   const { toast } = useToast();
   const { user } = useAuth();
 
   useEffect(() => {
     loadForecastData();
+    loadEmployees();
     // Set default to current month
     const today = new Date();
     setSelectedMonth(`${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`);
@@ -49,6 +61,16 @@ export default function ForecastView() {
       toast({ title: 'Error loading forecast data', variant: 'destructive' });
     }
     setLoading(false);
+  };
+
+  const loadEmployees = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/employees`);
+      const data = res.ok ? await res.json() : [];
+      setEmployees(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error('Error loading employees:', err);
+    }
   };
 
   const getMonthFromDate = (dateStr?: string): string => {
@@ -80,7 +102,17 @@ export default function ForecastView() {
     return `Week ${weekNum} (${weekStart.toLocaleDateString('en-ZA', { month: 'short', day: 'numeric' })} - ${weekEnd.toLocaleDateString('en-ZA', { month: 'short', day: 'numeric', year: 'numeric' })})`;
   };
 
-  const groupedByMonth = prospects.reduce((acc, prospect) => {
+  const getEmployeeName = (employeeId?: number): string => {
+    if (!employeeId) return 'Unassigned';
+    const emp = employees.find(e => e.employee_id === employeeId);
+    return emp ? `${emp.first_name} ${emp.last_name}` : 'Unknown';
+  };
+
+  const filteredProspects = selectedSalesperson
+    ? prospects.filter(p => p.assigned_to === selectedSalesperson)
+    : prospects;
+
+  const groupedByMonth = filteredProspects.reduce((acc, prospect) => {
     const closingDate = prospect.expected_closing_date || prospect.expected_payment_date;
     const month = getMonthFromDate(closingDate);
     if (!month) return acc;
@@ -89,7 +121,7 @@ export default function ForecastView() {
     return acc;
   }, {} as Record<string, ForecastProspect[]>);
 
-  const groupedByWeek = prospects.reduce((acc, prospect) => {
+  const groupedByWeek = filteredProspects.reduce((acc, prospect) => {
     const closingDate = prospect.expected_closing_date || prospect.expected_payment_date;
     const week = getWeekFromDate(closingDate);
     if (!week) return acc;
@@ -146,27 +178,49 @@ export default function ForecastView() {
         <p className="text-gray-600">Expected closing dates and revenue forecast</p>
       </div>
 
-      <div className="flex gap-2 mb-4">
-        <button
-          onClick={() => setViewMode('monthly')}
-          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-            viewMode === 'monthly'
-              ? 'bg-teal-600 text-white'
-              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-          }`}
-        >
-          Monthly View
-        </button>
-        <button
-          onClick={() => setViewMode('weekly')}
-          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-            viewMode === 'weekly'
-              ? 'bg-teal-600 text-white'
-              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-          }`}
-        >
-          Weekly View
-        </button>
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="flex gap-2">
+          <button
+            onClick={() => setViewMode('monthly')}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              viewMode === 'monthly'
+                ? 'bg-teal-600 text-white'
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
+          >
+            Monthly View
+          </button>
+          <button
+            onClick={() => setViewMode('weekly')}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              viewMode === 'weekly'
+                ? 'bg-teal-600 text-white'
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
+          >
+            Weekly View
+          </button>
+        </div>
+
+        <div className="flex gap-2 items-center flex-wrap">
+          <label className="text-sm font-medium text-gray-700">Filter by Salesperson:</label>
+          <select
+            value={selectedSalesperson || ''}
+            onChange={(e) => setSelectedSalesperson(e.target.value ? parseInt(e.target.value) : null)}
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+          >
+            <option value="">All Salespersons</option>
+            {employees.map(emp => {
+              const empId = emp.employee_id || emp.id;
+              const empName = emp.full_name || `${emp.first_name || ''} ${emp.last_name || ''}`.trim();
+              return (
+                <option key={empId} value={empId}>
+                  {empName}
+                </option>
+              );
+            })}
+          </select>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -182,14 +236,14 @@ export default function ForecastView() {
 
         <Card className="p-4 bg-gradient-to-br from-green-50 to-green-100 border-green-200">
           <p className="text-sm text-gray-600">Total Opportunities</p>
-          <p className="text-3xl font-bold text-green-900">{prospects.length}</p>
+          <p className="text-3xl font-bold text-green-900">{filteredProspects.length}</p>
           <p className="text-xs text-gray-500 mt-1">Prospects with forecast data</p>
         </Card>
 
         <Card className="p-4 bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
           <p className="text-sm text-gray-600">Average Probability</p>
           <p className="text-3xl font-bold text-purple-900">
-            {Math.round(prospects.reduce((sum, p) => sum + (p.forecast_probability || 50), 0) / Math.max(prospects.length, 1))}%
+            {Math.round(filteredProspects.reduce((sum, p) => sum + (p.forecast_probability || 50), 0) / Math.max(filteredProspects.length, 1))}%
           </p>
           <p className="text-xs text-gray-500 mt-1">Across all opportunities</p>
         </Card>
