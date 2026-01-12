@@ -119,6 +119,7 @@ export default function ProjectCard({ project, onClick, isSelected = false, onSe
         </div>
         <div className="flex flex-col items-end gap-1">
           <StatusBadge status={project.status} type="project" />
+          {formattedPayment && <div className="text-xs text-gray-600">Balance Due:</div>}
           {formattedPayment && <div className="text-sm text-gray-700 font-medium">{formattedPayment}</div>}
         </div>
       </div>

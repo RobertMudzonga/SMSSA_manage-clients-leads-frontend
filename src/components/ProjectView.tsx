@@ -387,6 +387,22 @@ export default function ProjectView({ projectId, onClose }: ProjectViewProps) {
                 <div className="text-sm text-gray-600">Project has completed the pipeline stages.</div>
               </div>
             </div>
+
+            <div className={`p-3 rounded ${stage === 7 ? 'bg-orange-50 border-l-4 border-orange-600' : 'bg-white border'}`}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="font-medium">7. On Hold</div>
+                  <div className="text-sm text-gray-600">Project is on hold pending review or action</div>
+                </div>
+                <div>
+                  {stage !== 7 ? (
+                    <Button size="sm" onClick={async () => { await updateProjectStage(7); }}>Set On Hold</Button>
+                  ) : (
+                    <Button size="sm" variant="outline" onClick={async () => { await updateProjectStage(6); }}>Resume</Button>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
         </Card>
 
@@ -433,6 +449,20 @@ export default function ProjectView({ projectId, onClose }: ProjectViewProps) {
             </Card>
           )}
 
+          {stage === 7 && (
+            <Card className="p-4">
+              <h3 className="font-semibold">Project On Hold</h3>
+              <p className="text-sm text-gray-600 mb-4">This project is currently on hold. Review and provide feedback before resuming.</p>
+              <div className="space-y-3">
+                <div>
+                  <label className="text-sm font-medium">Reason for Hold (Optional)</label>
+                  <textarea className="w-full p-2 border rounded mt-1" rows={3} placeholder="Enter reason why project is on hold..." />
+                </div>
+                <Button className="w-full" onClick={async () => { await updateProjectStage(6); }}>Resume to Completed</Button>
+              </div>
+            </Card>
+          )}
+
           {isAdmin && (
             <Card className="p-4">
               <h3 className="font-semibold mb-2">Edit Project Details (Internal)</h3>
@@ -462,12 +492,13 @@ export default function ProjectView({ projectId, onClose }: ProjectViewProps) {
                   <input type="date" className="w-full p-2 border rounded" value={formatForDateInput(project?.start_date || '')} onChange={(e) => setProject({ ...project, start_date: e.target.value })} />
                 </div>
                 <div>
-                  <label className="text-sm">Payment Amount</label>
+                  <label className="text-sm">Balance Due</label>
                   <input type="number" step="0.01" className="w-full p-2 border rounded" value={project?.payment_amount || ''} onChange={(e) => setProject({ ...project, payment_amount: e.target.value })} />
                 </div>
                 <div>
-                  <label className="text-sm">Status</label>
-                  <input className="w-full p-2 border rounded" value={project?.status || ''} onChange={(e) => setProject({ ...project, status: e.target.value })} />
+                  <label className="text-sm">Status (Auto-derived from Stage)</label>
+                  <input className="w-full p-2 border rounded bg-gray-100 cursor-not-allowed" value={project?.status || ''} disabled readOnly />
+                  <p className="text-xs text-gray-500 mt-1">Status is automatically determined by the project stage.</p>
                 </div>
               </div>
               <div className="mt-3">
@@ -484,7 +515,7 @@ export default function ProjectView({ projectId, onClose }: ProjectViewProps) {
                       priority: project?.priority,
                       start_date: project?.start_date,
                       payment_amount: project?.payment_amount,
-                      status: project?.status,
+                      // status is auto-derived from stage, don't manually set it
                     };
                     const res = await fetch(`/api/projects/${projectId}`, { method: 'PATCH', headers, body: JSON.stringify(payload) });
                     if (!res.ok) {
