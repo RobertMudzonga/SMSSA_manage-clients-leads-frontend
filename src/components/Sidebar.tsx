@@ -14,6 +14,7 @@ export default function Sidebar({ activeTab, onTabChange, isOpen = false, onClos
     { id: 'prospects', label: 'Prospects', icon: '👥' },
     { id: 'projects', label: 'Projects', icon: '📁' },
     { id: 'employees', label: 'Employees', icon: '👔' },
+    { id: 'leave-requests', label: 'Leave Requests', icon: '🏖️' },
     { id: 'payment-requests', label: 'Payment Requests', icon: '💳' },
     { id: 'documents', label: 'Documents', icon: '📄' },
     { id: 'templates', label: 'Templates', icon: '📝' },

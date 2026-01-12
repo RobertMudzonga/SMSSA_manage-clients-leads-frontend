@@ -18,6 +18,7 @@ import { AnalyticsView } from './AnalyticsView';
 import ProjectView from './ProjectView';
 import LeadsView from './LeadsView';
 import PaymentRequestsView from './PaymentRequestsView';
+import LeaveRequestsView from './LeaveRequestsView';
 import { API_BASE } from '../lib/api';
 
 export default function AppLayout() {
@@ -639,6 +640,7 @@ export default function AppLayout() {
         {activeTab === 'client-portal' && <ClientPortalView clientData={clientData} />}
         {activeTab === 'database-health' && <DatabaseHealthDashboard />}
         {activeTab === 'leads' && <LeadsView />}
+        {activeTab === 'leave-requests' && <LeaveRequestsView />}
         {activeTab === 'payment-requests' && (
           <PaymentRequestsView
             paymentRequests={paymentRequests}
