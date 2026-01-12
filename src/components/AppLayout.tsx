@@ -19,6 +19,7 @@ import ProjectView from './ProjectView';
 import LeadsView from './LeadsView';
 import PaymentRequestsView from './PaymentRequestsView';
 import LeaveRequestsView from './LeaveRequestsView';
+import ForecastView from './ForecastView';
 import { API_BASE } from '../lib/api';
 
 export default function AppLayout() {
@@ -606,6 +607,8 @@ export default function AppLayout() {
             onSetProspectTags={handleSetProspectTags}
           />
         )}
+
+        {activeTab === 'forecast' && <ForecastView />}
 
         {activeTab === 'projects' && !selectedProjectForChecklist && (
           <ProjectsView 

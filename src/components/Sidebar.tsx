@@ -12,13 +12,14 @@ export default function Sidebar({ activeTab, onTabChange, isOpen = false, onClos
     { id: 'dashboard', label: 'Dashboard', icon: '📊' },
     { id: 'leads', label: 'Leads', icon: '🎯' },
     { id: 'prospects', label: 'Prospects', icon: '👥' },
+    { id: 'forecast', label: 'Forecast', icon: '📈' },
     { id: 'projects', label: 'Projects', icon: '📁' },
     { id: 'employees', label: 'Employees', icon: '👔' },
     { id: 'leave-requests', label: 'Leave Requests', icon: '🏖️' },
     { id: 'payment-requests', label: 'Payment Requests', icon: '💳' },
     { id: 'documents', label: 'Documents', icon: '📄' },
     { id: 'templates', label: 'Templates', icon: '📝' },
-    { id: 'analytics', label: 'Analytics', icon: '📈' },
+    { id: 'analytics', label: 'Analytics', icon: '📊' },
     { id: 'client-portal', label: 'Client Portal', icon: '🔐' },
     { id: 'database-health', label: 'Database Health', icon: '🔧' }
   ];

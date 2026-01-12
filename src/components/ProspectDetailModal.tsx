@@ -43,10 +43,12 @@ export default function ProspectDetailModal({
   const [professionalFees, setProfessionalFees] = useState(prospect?.professional_fees || '');
   const [depositAmount, setDepositAmount] = useState(prospect?.deposit_amount || '');
   const [expectedClosingDate, setExpectedClosingDate] = useState(formatForDateInput(prospect?.expected_closing_date || ''));
+  const [expectedPaymentDate, setExpectedPaymentDate] = useState(formatForDateInput(prospect?.expected_payment_date || ''));
+  const [forecastAmount, setForecastAmount] = useState(prospect?.forecast_amount || '');
+  const [forecastProbability, setForecastProbability] = useState(prospect?.forecast_probability || 50);
   const [availableTags, setAvailableTags] = useState<any[]>([]);
   const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
   const { toast } = useToast();
-  
 
   // initialize fields when prospect changes
   React.useEffect(() => {
@@ -62,6 +64,9 @@ export default function ProspectDetailModal({
     setProfessionalFees(prospect?.professional_fees || '');
     setDepositAmount(prospect?.deposit_amount || '');
     setExpectedClosingDate(formatForDateInput(prospect?.expected_closing_date || ''));
+    setExpectedPaymentDate(formatForDateInput(prospect?.expected_payment_date || ''));
+    setForecastAmount(prospect?.forecast_amount || '');
+    setForecastProbability(prospect?.forecast_probability || 50);
     setNotes(prospect?.notes || '');
     // fetch available tags and selected tags
     (async () => {
@@ -138,6 +143,9 @@ export default function ProspectDetailModal({
           professional_fees: professionalFees || null,
           deposit_amount: depositAmount || null,
           expected_closing_date: expectedClosingDate || null,
+          expected_payment_date: expectedPaymentDate || null,
+          forecast_amount: forecastAmount ? parseFloat(forecastAmount) : null,
+          forecast_probability: parseInt(forecastProbability) || 50,
           notes
         });
         if (success) {
@@ -262,6 +270,21 @@ export default function ProspectDetailModal({
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Expected Closing Date</label>
                 <input type="date" value={expectedClosingDate} onChange={e => setExpectedClosingDate(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Expected Payment Date</label>
+                <input type="date" value={expectedPaymentDate} onChange={e => setExpectedPaymentDate(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Forecast Amount (R)</label>
+                <input type="number" step="0.01" value={forecastAmount} onChange={e => setForecastAmount(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="0.00" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Win Probability (%)</label>
+                <div className="flex items-center gap-2">
+                  <input type="range" min="0" max="100" value={forecastProbability} onChange={e => setForecastProbability(Number(e.target.value))} className="flex-1" />
+                  <span className="text-sm font-semibold text-gray-700 w-12 text-right">{forecastProbability}%</span>
+                </div>
               </div>
             </div>
               {/* Documents moved to DocumentsView */}
