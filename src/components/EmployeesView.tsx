@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { EmployeeCard } from './EmployeeCard';
 import { EmployeeDetailModal } from './EmployeeDetailModal';
 import AddEmployeeModal from './AddEmployeeModal';
+import EditEmployeeModal from './EditEmployeeModal';
 import { useAuth } from '@/contexts/AuthContext';
 import { Plus, Search, Download, Filter } from 'lucide-react';
 
@@ -14,6 +15,7 @@ interface EmployeesViewProps {
   goals: any[];
   reviews: any[];
   onAddEmployee: (data?: any) => Promise<any> | void;
+  onEditEmployee?: (id: string, data: any) => Promise<any> | void;
   onCalculateMetrics: (employeeId: string) => void;
   onDeleteEmployee?: (id: string) => void;
 }
@@ -24,6 +26,7 @@ export function EmployeesView({
   goals, 
   reviews, 
   onAddEmployee,
+  onEditEmployee,
   onCalculateMetrics,
   onDeleteEmployee
 }: EmployeesViewProps) {
@@ -34,6 +37,7 @@ export function EmployeesView({
   const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
 
   // Filter employees based on user permissions
   const visibleEmployees = isSuperAdmin 
@@ -144,6 +148,10 @@ export function EmployeesView({
           reviews={getEmployeeReviews(selectedEmployee.id)}
           open={showDetailModal}
           onClose={() => setShowDetailModal(false)}
+          onEdit={() => {
+            setShowDetailModal(false);
+            setShowEditModal(true);
+          }}
           onDelete={onDeleteEmployee}
         />
       )}
@@ -161,6 +169,30 @@ export function EmployeesView({
           }
         }}
       />
+      {selectedEmployee && (
+        <EditEmployeeModal
+          isOpen={showEditModal}
+          employee={selectedEmployee}
+          onClose={() => {
+            setShowEditModal(false);
+            setSelectedEmployee(null);
+          }}
+          onSubmit={async (data) => {
+            try {
+              const res = await onEditEmployee?.(String(selectedEmployee.id), data);
+              if (res && res.error) {
+                console.error('Failed to edit employee', res.error);
+                throw res.error;
+              }
+              // Update the selected employee with new data
+              setSelectedEmployee({ ...selectedEmployee, ...data });
+            } catch (err) {
+              console.error('Failed to edit employee from modal', err);
+              throw err;
+            }
+          }}
+        />
+      )}
     </div>
   );
 }

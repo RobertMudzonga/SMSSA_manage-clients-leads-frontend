@@ -4,6 +4,7 @@ interface DashboardViewProps {
   stats: {
     totalProspects: number;
     activeProjects: number;
+    submittedProjects: number;
     pendingDocuments: number;
     revenue: number;
   };
@@ -26,7 +27,7 @@ export default function DashboardView({ stats }: DashboardViewProps) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
         <StatsCard 
           title="Total Prospects" 
           value={stats.totalProspects}
@@ -39,6 +40,12 @@ export default function DashboardView({ stats }: DashboardViewProps) {
           value={stats.activeProjects}
           icon={<svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>}
           color="bg-teal-500"
+        />
+        <StatsCard 
+          title="Submitted Projects" 
+          value={stats.submittedProjects}
+          icon={<svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
+          color="bg-purple-500"
         />
         <StatsCard 
           title="Pending Docs" 

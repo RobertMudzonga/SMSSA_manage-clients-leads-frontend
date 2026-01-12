@@ -12,7 +12,7 @@ interface CompletionChartProps {
 export function CompletionChart({ data }: CompletionChartProps) {
   const chartData = [
     { name: 'Completed', value: data.completed, color: '#10b981' },
-    { name: 'In Progress', value: data.inProgress, color: '#3b82f6' },
+    { name: 'Submitted', value: data.inProgress, color: '#3b82f6' },
     { name: 'Pending', value: data.pending, color: '#f59e0b' }
   ];
 

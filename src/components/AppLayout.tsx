@@ -153,6 +153,34 @@ export default function AppLayout() {
     }
   };
 
+  const handleEditEmployee = async (id: string, data: any) => {
+    if (!isAdmin) {
+      toast({ title: 'Permission denied', description: 'Only admins may edit employees', variant: 'destructive' });
+      console.warn('Only admins may edit employees');
+      return { error: { message: 'Only admins may edit employees' } };
+    }
+    try {
+      const resp = await fetch(`${API_BASE}/employees/${id}`, { 
+        method: 'PATCH', 
+        headers: { 'Content-Type': 'application/json' }, 
+        body: JSON.stringify(data) 
+      });
+      if (resp.ok) {
+        await loadData();
+        toast({ title: 'Employee updated' });
+        return { ok: true };
+      }
+      const err = await resp.json().catch(() => null);
+      console.error('Failed to update employee:', err);
+      toast({ title: 'Failed to update employee', description: err?.error || 'Unknown', variant: 'destructive' });
+      return { error: err };
+    } catch (err) {
+      console.error('Error updating employee:', err);
+      toast({ title: 'Failed to update employee', description: String(err), variant: 'destructive' });
+      return { error: err };
+    }
+  };
+
   const handleDeleteEmployee = async (id: string) => {
     if (!isAdmin) {
       toast({ title: 'Permission denied', description: 'Only admins may delete employees', variant: 'destructive' });
@@ -540,7 +568,11 @@ export default function AppLayout() {
     totalProspects: prospects.length,
     activeProjects: projects.filter(p => {
       const s = (p && p.status) ? p.status.toString().toLowerCase() : '';
-      return s !== 'completed' && s !== 'complete';
+      return s !== 'completed' && s !== 'complete' && s !== 'submitted';
+    }).length,
+    submittedProjects: projects.filter(p => {
+      const s = (p && p.status) ? p.status.toString().toLowerCase() : '';
+      return s === 'submitted';
     }).length,
     pendingDocuments: documents.filter(d => d.status === 'pending').length,
     revenue: projects.reduce((sum, p) => sum + (parseFloat(p.payment_amount) || 0), 0)
@@ -633,6 +665,7 @@ export default function AppLayout() {
             goals={goals}
             reviews={reviews}
             onAddEmployee={handleAddEmployee}
+            onEditEmployee={handleEditEmployee}
             onCalculateMetrics={handleCalculateMetrics}
             onDeleteEmployee={handleDeleteEmployee}
           />

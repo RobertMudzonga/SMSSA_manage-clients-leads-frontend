@@ -67,7 +67,7 @@ export default function ProjectCard({ project, onClick, isSelected = false, onSe
 
   const handleDeleteProject = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    const id = project.project_id || project.id;
+    const id = project.project_name || project.project_id || project.id;
     if (!id) return;
     if (!confirm(`Delete project ${project.project_name || id}? This cannot be undone.`)) return;
     try {

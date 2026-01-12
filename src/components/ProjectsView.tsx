@@ -3,6 +3,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import ProjectCard from './ProjectCard';
 import CreateProjectModal from './CreateProjectModal';
+import ImportProjectsModal from './ImportProjectsModal';
 import GanttChart from './GanttChart';
 import ProjectAlerts from './ProjectAlerts';
 import { LayoutGrid, BarChart3 } from 'lucide-react';
@@ -19,6 +20,7 @@ interface ProjectsViewProps {
 export default function ProjectsView({ projects, onCreateProject, onProjectClick, onRefresh, employees = [] }: ProjectsViewProps) {
   const { toast } = useToast();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterVisaType, setFilterVisaType] = useState('all');
@@ -232,7 +234,7 @@ export default function ProjectsView({ projects, onCreateProject, onProjectClick
               }}
             />
             <button
-              onClick={() => fileInputRef.current?.click()}
+              onClick={() => setIsImportModalOpen(true)}
               className="px-3 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300"
             >
               Import
@@ -265,7 +267,7 @@ export default function ProjectsView({ projects, onCreateProject, onProjectClick
           >
             <option value="all">All Status</option>
             <option value="active">Active</option>
-            <option value="in-progress">In Progress</option>
+            <option value="submitted">Submitted</option>
             <option value="completed">Completed</option>
           </select>
           <select
@@ -325,7 +327,7 @@ export default function ProjectsView({ projects, onCreateProject, onProjectClick
       {viewMode === 'grid' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredProjects.map((project, idx) => {
-            const id = project?.project_id || project?.id || project?.projectId || `project-${idx}`;
+            const id = project?.project_name || project?.project_id || project?.id || project?.projectId || `project-${idx}`;
             return (
               <ProjectCard 
                 key={id}
@@ -430,6 +432,15 @@ export default function ProjectsView({ projects, onCreateProject, onProjectClick
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ImportProjectsModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        onSuccess={() => {
+          if (typeof onRefresh === 'function') onRefresh();
+          setIsImportModalOpen(false);
+        }}
+      />
       
     </div>
   );

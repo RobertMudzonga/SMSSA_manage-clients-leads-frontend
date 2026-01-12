@@ -9,22 +9,25 @@ export default function ClientPortal() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [projectData, setProjectData] = useState<any>(null);
+  const [token, setToken] = useState<string | null>(null);
 
   useEffect(() => {
     validateAndLoadProject();
   }, []);
 
   const validateAndLoadProject = async () => {
-    const token = searchParams.get('token');
+    const tokenParam = searchParams.get('token');
     
-    if (!token) {
+    if (!tokenParam) {
       setError('Invalid access link. Please contact your immigration consultant.');
       setLoading(false);
       return;
     }
 
+    setToken(tokenParam);
+
     try {
-      const resp = await fetch(`${API_BASE}/client-portal/validate?token=${encodeURIComponent(token)}`);
+      const resp = await fetch(`${API_BASE}/client-portal/validate?token=${encodeURIComponent(tokenParam)}`);
       const json = await resp.json().catch(() => null);
       if (!resp.ok) {
         setError(json?.error === 'expired' ? 'This access link has expired. Please contact your consultant for a new link.' : 'Invalid or expired access link.');
@@ -64,8 +67,10 @@ export default function ClientPortal() {
 
   return (
     <ClientDocumentUploadView 
-      projectId={projectData.id}
-      clientName={projectData.client_name}
+      projectId={projectData?.project_id}
+      projectName={projectData?.project_name}
+      clientName={projectData?.client_name}
+      clientPortalToken={token}
     />
   );
 }

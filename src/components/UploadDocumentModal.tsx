@@ -8,9 +8,10 @@ interface UploadDocumentModalProps {
   onClose: () => void;
   onSubmit: (data: any) => void;
   projectId?: string;
+  projectName?: string;
 }
 
-export default function UploadDocumentModal({ isOpen, onClose, onSubmit, projectId }: UploadDocumentModalProps) {
+export default function UploadDocumentModal({ isOpen, onClose, onSubmit, projectId, projectName }: UploadDocumentModalProps) {
   const { toast } = useToast();
   const [formData, setFormData] = useState({
     document_name: '',
@@ -48,7 +49,14 @@ export default function UploadDocumentModal({ isOpen, onClose, onSubmit, project
     try {
       const fd = new FormData();
       fd.append('file', file as File);
-      fd.append('project_id', String(projectId || ''));
+      
+      // Support both project ID and project name
+      if (projectName) {
+        fd.append('project_name', projectName);
+      } else if (projectId) {
+        fd.append('project_id', String(projectId));
+      }
+      
       fd.append('document_name', formData.document_name);
       fd.append('document_type', formData.document_type);
       fd.append('signature_required', String(formData.signature_required));

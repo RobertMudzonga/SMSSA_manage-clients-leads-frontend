@@ -7,16 +7,24 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface DocumentUploadZoneProps {
-  projectId: string;
+  projectId?: string;
+  projectName?: string;
   checklistItemId: string;
   documentName: string;
+  documentType?: string;
+  description?: string;
+  clientPortalToken?: string;
   onUploadSuccess: () => void;
 }
 
 export default function DocumentUploadZone({ 
   projectId, 
+  projectName,
   checklistItemId, 
   documentName,
+  documentType,
+  description,
+  clientPortalToken,
   onUploadSuccess 
 }: DocumentUploadZoneProps) {
   const [uploading, setUploading] = useState(false);
@@ -40,16 +48,32 @@ export default function DocumentUploadZone({
     setUploadResult(null);
 
     try {
-      // Use backend upload endpoint which stores content in DB
+      // Use client portal endpoint if token is available, otherwise use regular endpoint
+      const endpoint = clientPortalToken ? '/api/client-portal/upload' : '/api/documents/upload';
+      
       const fd = new FormData();
       fd.append('file', file);
-      if (projectId) fd.append('project_id', String(projectId));
+      
+      if (clientPortalToken) {
+        // For client portal, use token
+        fd.append('client_portal_token', clientPortalToken);
+      } else {
+        // For regular users, support both project ID and project name
+        if (projectName) {
+          fd.append('project_name', projectName);
+        } else if (projectId) {
+          fd.append('project_id', String(projectId));
+        }
+      }
+      
       if (checklistItemId) fd.append('checklist_item_id', String(checklistItemId));
+      if (documentType) fd.append('document_type', documentType);
+      if (description) fd.append('description', description);
 
       const headers: Record<string,string> = {};
       if (user && user.email) headers['x-user-email'] = user.email;
 
-      const res = await fetch('/api/documents/upload', { method: 'POST', body: fd, headers });
+      const res = await fetch(endpoint, { method: 'POST', body: fd, headers });
       const ct = res.headers.get('content-type') || '';
       let json: any = null;
       if (ct.includes('application/json')) json = await res.json(); else { const t = await res.text(); try { json = JSON.parse(t); } catch { json = { error: t }; } }
@@ -81,7 +105,7 @@ export default function DocumentUploadZone({
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       uploadFile(e.dataTransfer.files[0]);
     }
-  }, [projectId, checklistItemId]);
+  }, [projectId, projectName, checklistItemId, clientPortalToken]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {

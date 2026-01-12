@@ -14,10 +14,11 @@ interface EmployeeDetailModalProps {
   reviews: any[];
   open: boolean;
   onClose: () => void;
+  onEdit?: () => void;
   onDelete?: (id: string) => void;
 }
 
-export function EmployeeDetailModal({ employee, metrics, goals, reviews, open, onClose, onDelete }: EmployeeDetailModalProps) {
+export function EmployeeDetailModal({ employee, metrics, goals, reviews, open, onClose, onEdit, onDelete }: EmployeeDetailModalProps) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const { toast } = useToast();
 
@@ -29,56 +30,67 @@ export function EmployeeDetailModal({ employee, metrics, goals, reviews, open, o
         <DialogHeader>
           <div className="flex items-center justify-between">
             <DialogTitle className="text-2xl">{employee.full_name} - Performance Review</DialogTitle>
-            {onDelete && (
-              <div>
-                <button
-                  className="px-3 py-1 text-sm text-red-600 bg-red-50 rounded"
-                  onClick={() => setConfirmOpen(true)}
-                >
-                  Delete
-                </button>
-
-                {/* Confirmation dialog */}
-                <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-                  <DialogContent className="max-w-md">
-                    <DialogHeader>
-                      <DialogTitle>Confirm delete</DialogTitle>
-                      <DialogDescription>Are you sure you want to delete {employee.full_name}? This action cannot be undone.</DialogDescription>
-                    </DialogHeader>
-                    <DialogFooter>
-                      <div className="flex gap-2">
-                        <button className="px-3 py-1 rounded bg-gray-100" onClick={() => setConfirmOpen(false)}>Cancel</button>
-                        <button
-                          className="px-3 py-1 rounded bg-red-600 text-white"
-                          onClick={async () => {
-                            try {
-                              const res = await onDelete(String(employee.id));
-                              if (res && res.error) {
-                                console.error('Failed to delete employee', res.error);
-                                toast({ title: 'Delete failed', description: res.error.message || JSON.stringify(res.error), variant: 'destructive' });
-                                return;
-                              }
-                              toast({ title: 'Employee deleted' });
-                              setConfirmOpen(false);
-                              onClose();
-                            } catch (err) {
-                              console.error('Failed to delete employee', err);
-                              toast({ title: 'Delete failed', description: err?.message || String(err), variant: 'destructive' });
-                            }
-                          }}
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
+            {(onEdit || onDelete) && (
+              <div className="flex gap-2">
+                {onEdit && (
+                  <button
+                    className="px-3 py-1 text-sm text-blue-600 bg-blue-50 rounded hover:bg-blue-100"
+                    onClick={onEdit}
+                  >
+                    Edit
+                  </button>
+                )}
+                {onDelete && (
+                  <button
+                    className="px-3 py-1 text-sm text-red-600 bg-red-50 rounded hover:bg-red-100"
+                    onClick={() => setConfirmOpen(true)}
+                  >
+                    Delete
+                  </button>
+                )}
               </div>
             )}
           </div>
         </DialogHeader>
         
         <DialogDescription>{employee.job_position} • {employee.work_email}</DialogDescription>
+
+        {/* Confirmation dialog for delete */}
+        <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Confirm delete</DialogTitle>
+              <DialogDescription>Are you sure you want to delete {employee.full_name}? This action cannot be undone.</DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <div className="flex gap-2">
+                <button className="px-3 py-1 rounded bg-gray-100" onClick={() => setConfirmOpen(false)}>Cancel</button>
+                <button
+                  className="px-3 py-1 rounded bg-red-600 text-white"
+                  onClick={async () => {
+                    try {
+                      const res = await onDelete(String(employee.id));
+                      if (res && res.error) {
+                        console.error('Failed to delete employee', res.error);
+                        toast({ title: 'Delete failed', description: res.error.message || JSON.stringify(res.error), variant: 'destructive' });
+                        return;
+                      }
+                      toast({ title: 'Employee deleted' });
+                      setConfirmOpen(false);
+                      onClose();
+                    } catch (err) {
+                      console.error('Failed to delete employee', err);
+                      toast({ title: 'Delete failed', description: err?.message || String(err), variant: 'destructive' });
+                    }
+                  }}
+                >
+                  Delete
+                </button>
+              </div>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+        
         <Tabs defaultValue="overview" className="w-full">
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="overview">Overview</TabsTrigger>

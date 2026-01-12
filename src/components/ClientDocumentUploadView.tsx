@@ -9,13 +9,17 @@ import { CLIENT_UPLOADS_ENABLED } from '@/utils/documentSettings';
 import { useToast } from '@/hooks/use-toast';
 
 interface ClientDocumentUploadViewProps {
-  projectId: string;
+  projectId?: string;
+  projectName?: string;
   clientName: string;
+  clientPortalToken?: string;
 }
 
 export default function ClientDocumentUploadView({ 
   projectId, 
-  clientName 
+  projectName,
+  clientName,
+  clientPortalToken
 }: ClientDocumentUploadViewProps) {
   const [checklist, setChecklist] = useState<any[]>([]);
   const [project, setProject] = useState<any>(null);
@@ -142,8 +146,12 @@ export default function ClientDocumentUploadView({
                           {CLIENT_UPLOADS_ENABLED ? (
                             <DocumentUploadZone
                               projectId={projectId}
+                              projectName={projectName}
                               checklistItemId={item.id}
                               documentName={item.document_name}
+                              documentType={item.document_category}
+                              description={item.notes}
+                              clientPortalToken={clientPortalToken}
                               onUploadSuccess={loadData}
                             />
                           ) : (
