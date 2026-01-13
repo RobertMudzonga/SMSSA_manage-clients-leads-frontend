@@ -90,7 +90,7 @@ export default function ProjectsKanbanView({ projects, onProjectClick, onRefresh
     if (!project) return;
 
     try {
-      const resp = await fetch(`/api/projects/${project.project_name || project.project_id || project.id}/stage`, {
+      const resp = await fetch(`/api/projects/${project.project_id || project.id}/stage`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: statusToSet })
@@ -126,11 +126,11 @@ export default function ProjectsKanbanView({ projects, onProjectClick, onRefresh
                                 <div className="text-sm text-gray-500">{project.client_name || project.company || ''}</div>
                               </div>
                               <div className="flex flex-col items-end">
-                                <button onClick={() => onProjectClick?.(String(project.project_name || project.project_id || project.id))} className="text-xs px-2 py-1 bg-white border rounded">Open</button>
+                                <button onClick={() => onProjectClick?.(String(project.project_id || project.id))} className="text-xs px-2 py-1 bg-white border rounded">Open</button>
                                 <div className="mt-2">
                                   <select
                                     value={project.current_stage || ''}
-                                    onChange={(e) => applyStageToProject(project.project_name || project.project_id || project.id, Number(e.target.value))}
+                                    onChange={(e) => applyStageToProject(String(project.project_id || project.id), Number(e.target.value))}
                                     className="text-xs px-2 py-1 bg-white border rounded"
                                   >
                                     <option value="">Set stage</option>

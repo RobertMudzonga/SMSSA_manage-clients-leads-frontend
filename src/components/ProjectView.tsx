@@ -19,6 +19,7 @@ export default function ProjectView({ projectId, onClose }: ProjectViewProps) {
   const [stage, setStage] = useState<number>(1);
   const [showChecklist, setShowChecklist] = useState<boolean>(false);
   const [reviews, setReviews] = useState<any[]>([]);
+  const [employees, setEmployees] = useState<any[]>([]);
   const { user, isAdmin } = useAuth();
 
   // Submission stage state
@@ -40,8 +41,21 @@ export default function ProjectView({ projectId, onClose }: ProjectViewProps) {
   useEffect(() => {
     loadProject();
     loadReviews();
+    loadEmployees();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
+
+  const loadEmployees = async () => {
+    try {
+      const res = await fetch('/api/employees');
+      if (res.ok) {
+        const data = await res.json();
+        setEmployees(data);
+      }
+    } catch (err) {
+      console.error('Error loading employees:', err);
+    }
+  };
 
   const loadProject = async () => {
     setLoading(true);
@@ -496,6 +510,19 @@ export default function ProjectView({ projectId, onClose }: ProjectViewProps) {
                   <input type="number" step="0.01" className="w-full p-2 border rounded" value={project?.payment_amount || ''} onChange={(e) => setProject({ ...project, payment_amount: e.target.value })} />
                 </div>
                 <div>
+                  <label className="text-sm">Project Manager</label>
+                  <select 
+                    className="w-full p-2 border rounded" 
+                    value={project?.project_manager_id || ''} 
+                    onChange={(e) => setProject({ ...project, project_manager_id: e.target.value ? Number(e.target.value) : null })}
+                  >
+                    <option value="">No Manager Assigned</option>
+                    {employees.filter(emp => emp.department === 'Projects' || emp.department === 'Legal' || emp.department === 'Management').map((emp) => (
+                      <option key={emp.id} value={emp.id}>{emp.full_name} ({emp.department})</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
                   <label className="text-sm">Status (Auto-derived from Stage)</label>
                   <input className="w-full p-2 border rounded bg-gray-100 cursor-not-allowed" value={project?.status || ''} disabled readOnly />
                   <p className="text-xs text-gray-500 mt-1">Status is automatically determined by the project stage.</p>
@@ -515,6 +542,7 @@ export default function ProjectView({ projectId, onClose }: ProjectViewProps) {
                       priority: project?.priority,
                       start_date: project?.start_date,
                       payment_amount: project?.payment_amount,
+                      project_manager_id: project?.project_manager_id,
                       // status is auto-derived from stage, don't manually set it
                     };
                     const res = await fetch(`/api/projects/${projectId}`, { method: 'PATCH', headers, body: JSON.stringify(payload) });

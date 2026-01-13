@@ -87,7 +87,7 @@ export default function ProjectsView({ projects, onCreateProject, onProjectClick
       setSelectedProjects(new Set());
     } else {
       const allIds = new Set(
-        filteredProjects.map((p, idx) => p?.project_id || p?.id || p?.projectId || `project-${idx}`)
+        filteredProjects.map((p, idx) => String(p?.project_id || p?.id || p?.projectId || idx))
       );
       setSelectedProjects(allIds);
     }
@@ -327,21 +327,23 @@ export default function ProjectsView({ projects, onCreateProject, onProjectClick
       {viewMode === 'grid' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredProjects.map((project, idx) => {
-            const id = project?.project_name || project?.project_id || project?.id || project?.projectId || `project-${idx}`;
+            const projectId = String(project?.project_id || project?.id || project?.projectId || idx);
+            // Use project_id for React key to ensure uniqueness (project_name can be null/duplicate)
+            const uniqueKey = `project-${projectId}`;
             return (
               <ProjectCard 
-                key={id}
+                key={uniqueKey}
                 project={project}
-                onClick={() => onProjectClick(id)}
-                isSelected={selectedProjects.has(id)}
+                onClick={() => onProjectClick(projectId)}
+                isSelected={selectedProjects.has(projectId)}
                 onSelectionChange={(selected) => {
                   if (selected) {
                     const newSelected = new Set(selectedProjects);
-                    newSelected.add(id);
+                    newSelected.add(projectId);
                     setSelectedProjects(newSelected);
                   } else {
                     const newSelected = new Set(selectedProjects);
-                    newSelected.delete(id);
+                    newSelected.delete(projectId);
                     setSelectedProjects(newSelected);
                   }
                 }}

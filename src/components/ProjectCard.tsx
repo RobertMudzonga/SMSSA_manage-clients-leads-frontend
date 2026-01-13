@@ -67,9 +67,9 @@ export default function ProjectCard({ project, onClick, isSelected = false, onSe
 
   const handleDeleteProject = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    const id = project.project_name || project.project_id || project.id;
+    const id = project.project_id || project.id;
     if (!id) return;
-    if (!confirm(`Delete project ${project.project_name || id}? This cannot be undone.`)) return;
+    if (!confirm(`Delete project ${project.project_name || `Project ${id}`}? This cannot be undone.`)) return;
     try {
       const res = await fetch(`/api/projects/${id}`, { method: 'DELETE' });
       const json = await res.json().catch(() => ({}));
@@ -109,7 +109,7 @@ export default function ProjectCard({ project, onClick, isSelected = false, onSe
             className="w-5 h-5 mt-0.5 cursor-pointer accent-teal-600"
           />
           <div className="flex-1">
-            <h3 className="font-semibold text-gray-900">{project.project_name}</h3>
+            <h3 className="font-semibold text-gray-900">{project.project_name || 'Unnamed Project'}</h3>
             <p className="text-sm text-gray-600">{project.case_type || project.project_type}</p>
             {project.client_name && <p className="text-sm text-gray-600 mt-1">Client: {project.client_name}</p>}
             {project.project_manager_name && (
