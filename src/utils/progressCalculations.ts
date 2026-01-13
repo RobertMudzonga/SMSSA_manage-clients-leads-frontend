@@ -61,9 +61,13 @@ export function calculateExpectedDates(projectType: string, startDate: Date) {
 }
 
 export function calculateProgress(project: any): number {
-  if (!project.start_date || !project.project_type) return 0;
+  if (!project.start_date) return 0;
   
-  const dates = calculateExpectedDates(project.project_type, new Date(project.start_date));
+  // Use case_type from database (project_type is an alias)
+  const projectType = project.project_type || project.case_type;
+  if (!projectType) return 0;
+  
+  const dates = calculateExpectedDates(projectType, new Date(project.start_date));
   if (!dates) return 0;
   
   const now = new Date();

@@ -123,13 +123,6 @@ export default function ProjectCard({ project, onClick, isSelected = false, onSe
           {formattedPayment && <div className="text-sm text-gray-700 font-medium">{formattedPayment}</div>}
         </div>
       </div>
-
-      {expectedDates && (
-        <div className="flex items-center gap-1 text-xs text-gray-600 mb-3">
-          <Calendar className="w-3 h-3" />
-          <span>Expected: {expectedDates.expectedCompletion.toLocaleDateString()}</span>
-        </div>
-      )}
       
       <div className="mb-3">
           <div className="flex justify-between text-sm mb-1">

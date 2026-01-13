@@ -5,7 +5,6 @@ import ProjectCard from './ProjectCard';
 import CreateProjectModal from './CreateProjectModal';
 import ImportProjectsModal from './ImportProjectsModal';
 import GanttChart from './GanttChart';
-import ProjectAlerts from './ProjectAlerts';
 import { LayoutGrid, BarChart3 } from 'lucide-react';
 import ProjectsKanbanView from './ProjectsKanbanView';
 
@@ -248,8 +247,6 @@ export default function ProjectsView({ projects, onCreateProject, onProjectClick
           </div>
         </div>
       </div>
-
-      <ProjectAlerts projects={projects} />
 
       <div className="flex flex-col gap-4">
         <div className="flex gap-4 flex-wrap">
