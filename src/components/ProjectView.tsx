@@ -517,7 +517,7 @@ export default function ProjectView({ projectId, onClose }: ProjectViewProps) {
                     onChange={(e) => setProject({ ...project, project_manager_id: e.target.value ? Number(e.target.value) : null })}
                   >
                     <option value="">No Manager Assigned</option>
-                    {employees.filter(emp => emp.department === 'Projects' || emp.department === 'Legal' || emp.department === 'Management').map((emp) => (
+                    {employees.map((emp) => (
                       <option key={emp.id} value={emp.id}>{emp.full_name} ({emp.department})</option>
                     ))}
                   </select>
