@@ -63,6 +63,7 @@ export default function ProspectsView({
   const [autoMode, setAutoMode] = useState(true); // if true, auto-switch based on viewport width
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [selectedSalesperson, setSelectedSalesperson] = useState<number | null>(null);
+  const [collapsedStages, setCollapsedStages] = useState<Set<string>>(new Set());
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [importPreviewOpen, setImportPreviewOpen] = useState(false);
   const [importPreviewRows, setImportPreviewRows] = useState<any[]>([]);
@@ -165,6 +166,16 @@ export default function ProspectsView({
     } else {
       await onMoveStage(prospectId, toStage);
     }
+  };
+
+  const toggleStageCollapse = (stageKey: string) => {
+    const newCollapsed = new Set(collapsedStages);
+    if (newCollapsed.has(stageKey)) {
+      newCollapsed.delete(stageKey);
+    } else {
+      newCollapsed.add(stageKey);
+    }
+    setCollapsedStages(newCollapsed);
   };
 
   return (
@@ -289,6 +300,8 @@ export default function ProspectsView({
                 prospects={filteredProspects}
                 onProspectClick={setSelectedProspect}
                 onMoveStage={wrappedMoveStage}
+                isCollapsed={collapsedStages.has(stage.key)}
+                onToggleCollapse={() => toggleStageCollapse(stage.key)}
               />
             ))}
           </div>
@@ -308,17 +321,28 @@ export default function ProspectsView({
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredProspects.map(p => (
                   <tr key={p.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900" onClick={() => setSelectedProspect(p)}>{p.name}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500" onClick={() => setSelectedProspect(p)}>
-                      {PIPELINE_STAGES.find(s => s.key === p.pipeline_stage)?.label}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 cursor-pointer" onClick={() => setSelectedProspect(p)}>{p.name}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <select
+                        value={p.pipeline_stage}
+                        onChange={(e) => wrappedMoveStage(p.id, e.target.value)}
+                        onClick={(e) => e.stopPropagation()}
+                        className="px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-2 focus:ring-teal-500 bg-white"
+                      >
+                        {PIPELINE_STAGES.map(stage => (
+                          <option key={stage.key} value={stage.key}>
+                            {stage.label}
+                          </option>
+                        ))}
+                      </select>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500" onClick={() => setSelectedProspect(p)}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 cursor-pointer" onClick={() => setSelectedProspect(p)}>
                       {p.quote_amount ? `R${Number(p.quote_amount).toLocaleString()}` : '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       <div className="flex gap-2">
-                        <button onClick={() => openConfirmWon(p.id)} className="px-3 py-1 bg-green-600 text-white rounded text-xs">Mark Won</button>
-                        <button onClick={() => setSelectedProspect(p)} className="px-3 py-1 bg-gray-100 text-gray-700 rounded text-xs">Details</button>
+                        <button onClick={() => openConfirmWon(p.id)} className="px-3 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700">Mark Won</button>
+                        <button onClick={() => setSelectedProspect(p)} className="px-3 py-1 bg-gray-100 text-gray-700 rounded text-xs hover:bg-gray-200">Details</button>
                       </div>
                     </td>
                   </tr>
