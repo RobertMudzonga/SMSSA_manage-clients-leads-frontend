@@ -5,6 +5,7 @@ interface AuthContextValue {
   user: any | null;
   isAdmin: boolean;
   isSuperAdmin: boolean;
+  hasPermission: (permission: string) => boolean;
   loading: boolean;
   login: (email: string, password: string) => Promise<{ error?: any }>;
   logout: () => Promise<void>;
@@ -30,8 +31,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const computeIsSuperAdmin = (u: any | null) => {
-    if (!u || !u.email) return false;
+    if (!u) return false;
+    // Check the is_super_admin field from the database
+    // Fallback to email check for backwards compatibility during transition
+    if (u.is_super_admin === true) return true;
+    if (!u.email) return false;
     return SUPER_ADMIN_EMAILS.includes(u.email.toLowerCase());
+  };
+
+  const hasPermission = (permission: string): boolean => {
+    if (!user) return false;
+    // Super admins have all permissions
+    if (computeIsSuperAdmin(user)) return true;
+    // Check if user has the specific permission
+    return Array.isArray(user.permissions) && user.permissions.includes(permission);
   };
 
   const login = async (email: string, password: string) => {
@@ -85,6 +98,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     user,
     isAdmin: computeIsAdmin(user),
     isSuperAdmin: computeIsSuperAdmin(user),
+    hasPermission,
     loading,
     login,
     logout,

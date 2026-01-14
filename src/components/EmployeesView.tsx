@@ -30,7 +30,7 @@ export function EmployeesView({
   onCalculateMetrics,
   onDeleteEmployee
 }: EmployeesViewProps) {
-  const { user, isSuperAdmin } = useAuth();
+  const { user, isSuperAdmin, hasPermission } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterDepartment, setFilterDepartment] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
@@ -40,7 +40,9 @@ export function EmployeesView({
   const [showEditModal, setShowEditModal] = useState(false);
 
   // Filter employees based on user permissions
-  const visibleEmployees = isSuperAdmin 
+  // Users can see all employees if they are super admin OR have view_all_data permission
+  const canViewAllEmployees = isSuperAdmin || hasPermission('view_all_data');
+  const visibleEmployees = canViewAllEmployees 
     ? employees 
     : employees.filter(emp => emp.work_email === user?.email);
 
@@ -74,10 +76,10 @@ export function EmployeesView({
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-bold">Employee Performance</h2>
-          <p className="text-gray-500">{isSuperAdmin ? 'Manage and evaluate team performance' : 'Your Profile'}</p>
+          <p className="text-gray-500">{canViewAllEmployees ? 'Manage and evaluate team performance' : 'Your Profile'}</p>
         </div>
         <div className="flex gap-2">
-          {isSuperAdmin && (
+          {canViewAllEmployees && (
             <>
               <Button variant="outline" onClick={() => {}}>
                 <Download className="w-4 h-4 mr-2" />
@@ -92,7 +94,7 @@ export function EmployeesView({
         </div>
       </div>
 
-      {isSuperAdmin && (
+      {canViewAllEmployees && (
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />

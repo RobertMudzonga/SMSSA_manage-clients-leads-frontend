@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   Select,
   SelectContent,
@@ -25,8 +26,10 @@ export default function EditEmployeeModal({ isOpen, employee, onClose, onSubmit 
   const [department, setDepartment] = useState('');
   const [managerId, setManagerId] = useState<number | null>(null);
   const [isActive, setIsActive] = useState(true);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const { toast } = useToast();
+  const { isSuperAdmin: currentUserIsSuperAdmin } = useAuth();
 
   const departments = ['Sales', 'Project', 'Legal', 'Accounts', 'Management', 'IT'];
 
@@ -38,6 +41,7 @@ export default function EditEmployeeModal({ isOpen, employee, onClose, onSubmit 
       setDepartment(employee.department || '');
       setManagerId(employee.manager_id || null);
       setIsActive(employee.is_active !== false);
+      setIsSuperAdmin(employee.is_super_admin === true);
     }
   }, [isOpen, employee]);
 
@@ -56,6 +60,7 @@ export default function EditEmployeeModal({ isOpen, employee, onClose, onSubmit 
         department: department || null,
         manager_id: managerId,
         is_active: isActive,
+        is_super_admin: isSuperAdmin,
       };
 
       await onSubmit(updateData);
@@ -134,6 +139,24 @@ export default function EditEmployeeModal({ isOpen, employee, onClose, onSubmit 
               </SelectContent>
             </Select>
           </label>
+
+          {currentUserIsSuperAdmin && (
+            <label className="block">
+              <div className="text-sm text-gray-600 mb-1">Super Admin</div>
+              <Select value={isSuperAdmin ? 'true' : 'false'} onValueChange={(v) => setIsSuperAdmin(v === 'true')} disabled={submitting}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select super admin status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="false">No</SelectItem>
+                  <SelectItem value="true">Yes - Full System Access</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-gray-500 mt-1">
+                Super admins have complete access to all features and can manage other super admins
+              </p>
+            </label>
+          )}
         </div>
 
         <DialogFooter>
