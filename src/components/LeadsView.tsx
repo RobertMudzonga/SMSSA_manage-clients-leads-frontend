@@ -120,7 +120,7 @@ export default function ColdLeadsKanbanApp() {
         } finally {
             setIsLoading(false);
         }
-    }, []);
+    }, [filterEmployeeId]);
 
     const fetchEmployees = useCallback(async () => {
         try {
@@ -137,7 +137,7 @@ export default function ColdLeadsKanbanApp() {
     useEffect(() => {
         fetchLeads();
         fetchEmployees();
-    }, [fetchLeads, fetchEmployees, filterEmployeeId]);
+    }, [fetchLeads, fetchEmployees]);
 
     // --- Data Grouping ---
     const leadsByStage = useMemo(() => {
