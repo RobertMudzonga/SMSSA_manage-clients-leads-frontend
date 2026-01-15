@@ -91,6 +91,7 @@ export default function ColdLeadsKanbanApp() {
     const [toast, setToast] = useState(null);
     const [draggedLead, setDraggedLead] = useState(null);
     const [selectedLead, setSelectedLead] = useState(null);
+    const [filterEmployeeId, setFilterEmployeeId] = useState('');
 
     // --- Helper to show toasts ---
     const showToast = useCallback((message, type = 'success') => {
@@ -103,7 +104,11 @@ export default function ColdLeadsKanbanApp() {
         setIsLoading(true);
         setError(null);
         try {
-            const response = await fetch(`${API_BASE}/leads`);
+            const url = new URL(`${API_BASE}/leads`);
+            if (filterEmployeeId) {
+                url.searchParams.append('assigned_employee_id', filterEmployeeId);
+            }
+            const response = await fetch(url.toString());
             if (!response.ok) {
                 throw new Error('Failed to fetch leads');
             }
@@ -132,7 +137,7 @@ export default function ColdLeadsKanbanApp() {
     useEffect(() => {
         fetchLeads();
         fetchEmployees();
-    }, [fetchLeads, fetchEmployees]);
+    }, [fetchLeads, fetchEmployees, filterEmployeeId]);
 
     // --- Data Grouping ---
     const leadsByStage = useMemo(() => {
@@ -368,15 +373,30 @@ export default function ColdLeadsKanbanApp() {
     return (
         <div className="min-h-screen bg-gray-100 p-4 md:p-8">
             {/* Header */}
-            <div className="mb-6 flex justify-between items-center">
+            <div className="mb-6 flex justify-between items-center flex-wrap gap-4">
                 <h1 className="text-3xl font-extrabold text-gray-900">Cold Lead Management (Contact Funnel)</h1>
-                <button 
-                    onClick={fetchLeads} 
-                    className="flex items-center space-x-2 px-4 py-2 bg-teal-600 text-white rounded-lg shadow-md hover:bg-teal-700 transition"
-                >
-                    <RefreshCw className="w-4 h-4" />
-                    <span className="text-sm">Refresh Cold Leads</span>
-                </button>
+                <div className="flex items-center gap-3">
+                    <select
+                        value={filterEmployeeId}
+                        onChange={(e) => setFilterEmployeeId(e.target.value)}
+                        className="px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm hover:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
+                    >
+                        <option value="">All Assignees</option>
+                        <option value="unassigned">Unassigned</option>
+                        {employees.filter(emp => emp.is_active).map((employee) => (
+                            <option key={employee.id} value={employee.id}>
+                                {employee.full_name}
+                            </option>
+                        ))}
+                    </select>
+                    <button 
+                        onClick={fetchLeads} 
+                        className="flex items-center space-x-2 px-4 py-2 bg-teal-600 text-white rounded-lg shadow-md hover:bg-teal-700 transition"
+                    >
+                        <RefreshCw className="w-4 h-4" />
+                        <span className="text-sm">Refresh</span>
+                    </button>
+                </div>
             </div>
             
             {/* Kanban Board Container (Horizontal Scroll) */}
