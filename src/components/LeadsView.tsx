@@ -55,13 +55,29 @@ const Toast = ({ message, type, onClose }) => {
  * Cold Lead Card Component (Draggable)
  */
 const ColdLeadCard = ({ lead, onDragStart, onAdvanceStage, onClick }) => {
+    // Get lead name from multiple sources
+    const getLeadName = () => {
+        if (lead.first_name || lead.last_name) {
+            return `${lead.first_name || ''} ${lead.last_name || ''}`.trim();
+        }
+        // Try to get full_name from form_responses
+        if (lead.form_responses && Array.isArray(lead.form_responses)) {
+            const fullNameResponse = lead.form_responses.find(r => 
+                r.question && r.question.toLowerCase().includes('name')
+            );
+            if (fullNameResponse) return fullNameResponse.answer;
+        }
+        // Fallback to email or 'Unknown'
+        return lead.email || 'Unknown Lead';
+    };
+
     return (
         <Card 
             className="p-4 mb-4 cursor-pointer transition-shadow duration-200 hover:shadow-2xl border border-gray-200"
             onClick={onClick}
         >
             <h3 className="font-semibold text-gray-800 text-lg leading-tight">
-                {lead.first_name} {lead.last_name}
+                {getLeadName()}
             </h3>
             <p className="text-sm text-gray-500 mb-2 truncate">{lead.company}</p>
             <p className="text-xs text-teal-600">{lead.email}</p>

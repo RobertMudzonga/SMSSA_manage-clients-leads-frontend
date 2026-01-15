@@ -68,7 +68,21 @@ export default function LeadDetailModal({
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 sticky top-0 bg-white">
           <h2 className="text-xl font-bold text-gray-900">
-            {lead.first_name} {lead.last_name}
+            {(() => {
+              // Try to get name from first_name/last_name
+              if (lead.first_name || lead.last_name) {
+                return `${lead.first_name || ''} ${lead.last_name || ''}`.trim();
+              }
+              // Try to get full_name from form_responses
+              if (lead.form_responses && Array.isArray(lead.form_responses)) {
+                const fullNameResponse = lead.form_responses.find(r => 
+                  r.question && r.question.toLowerCase().includes('name')
+                );
+                if (fullNameResponse) return fullNameResponse.answer;
+              }
+              // Fallback to email or 'Unknown'
+              return lead.email || 'Unknown Lead';
+            })()}
           </h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
             <X className="w-6 h-6" />
@@ -138,6 +152,23 @@ export default function LeadDetailModal({
               </p>
             </div>
           </div>
+
+          {/* Form Responses Section */}
+          {lead.form_responses && Array.isArray(lead.form_responses) && lead.form_responses.length > 0 && (
+            <div className="border-t pt-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Form Responses
+              </label>
+              <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+                {lead.form_responses.map((response, index) => (
+                  <div key={index} className="border-b border-gray-200 pb-2 last:border-b-0 last:pb-0">
+                    <p className="text-xs font-semibold text-gray-600 mb-1">{response.question}</p>
+                    <p className="text-sm text-gray-900">{response.answer}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Employee Assignment Section */}
           {onAssignEmployee && employees.length > 0 && (
