@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, MessageSquare, Trash2, Archive, Calendar, Mail, Phone, Building, UserPlus } from 'lucide-react';
+import { X, MessageSquare, Trash2, Archive, Calendar, Mail, Phone, Building, UserPlus, FileText } from 'lucide-react';
 import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
@@ -105,6 +105,13 @@ export default function LeadDetailModal({
                 Source
               </label>
               <p className="text-gray-900">{lead.source || 'N/A'}</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                <FileText className="w-4 h-4 inline mr-1" />
+                Ad / Form
+              </label>
+              <p className="text-gray-900">{lead.form_id || 'N/A'}</p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
