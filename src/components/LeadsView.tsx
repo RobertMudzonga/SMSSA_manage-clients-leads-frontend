@@ -71,6 +71,19 @@ const ColdLeadCard = ({ lead, onDragStart, onAdvanceStage, onClick }) => {
         return lead.email || 'Unknown Lead';
     };
 
+    // Get initials for avatar
+    const getInitials = (name) => {
+        return name
+            .split(' ')
+            .map((n) => n[0])
+            .join('')
+            .toUpperCase()
+            .slice(0, 2);
+    };
+
+    const assignedName = lead.assigned_to_name || 'Unassigned';
+    const initials = getInitials(assignedName);
+
     return (
         <Card 
             className="p-4 mb-4 cursor-pointer transition-shadow duration-200 hover:shadow-2xl border border-gray-200"
@@ -80,7 +93,22 @@ const ColdLeadCard = ({ lead, onDragStart, onAdvanceStage, onClick }) => {
                 {getLeadName()}
             </h3>
             <p className="text-sm text-gray-500 mb-2 truncate">{lead.company}</p>
-            <p className="text-xs text-teal-600">{lead.email}</p>
+            <p className="text-xs text-teal-600 mb-3">{lead.email}</p>
+            
+            {/* Assigned Person Display */}
+            <div className="flex items-center gap-2 mb-3 p-2 bg-gray-50 rounded-lg border border-gray-100">
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold text-white ${
+                    lead.assigned_employee_id ? 'bg-teal-500' : 'bg-gray-400'
+                }`}>
+                    {initials}
+                </div>
+                <span className={`text-xs font-medium ${
+                    lead.assigned_employee_id ? 'text-teal-700' : 'text-gray-500'
+                }`}>
+                    {assignedName}
+                </span>
+            </div>
+
             <Progress value={((lead.current_stage_id - 101) / 3) * 100} className="my-2" />
             <Button 
                 onClick={(e) => {
