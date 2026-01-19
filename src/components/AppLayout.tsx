@@ -90,10 +90,30 @@ export default function AppLayout() {
       console.error('Error fetching payment requests:', err);
       paymentRequestsData = [];
     }
+    // Derive project metrics per employee (in-progress/completed)
+    const projectStatsByManager: Record<string, { inProgress: number; completed: number }> = {};
+    projectsData.forEach((p: any) => {
+      const managerId = p?.project_manager_id;
+      if (!managerId) return;
+      const status = (p?.status || '').toString().toLowerCase();
+      const isCompleted = status === 'completed' || status === 'complete' || status === 'submitted';
+      const key = String(managerId);
+      if (!projectStatsByManager[key]) projectStatsByManager[key] = { inProgress: 0, completed: 0 };
+      if (isCompleted) projectStatsByManager[key].completed += 1; else projectStatsByManager[key].inProgress += 1;
+    });
+    const enrichedEmployees = (employeesData || []).map((emp: any) => {
+      const stats = projectStatsByManager[String(emp.id)] || { inProgress: 0, completed: 0 };
+      return {
+        ...emp,
+        projects_in_progress: stats.inProgress,
+        projects_completed: stats.completed,
+        performance_rating: emp.performance_rating ?? null
+      };
+    });
     // For now, metrics/goals/reviews are loaded later or empty
     setProjects(projectsData || []);
     setDocuments([]);
-    setEmployees(employeesData || []);
+    setEmployees(enrichedEmployees || []);
     setMetrics([]);
     setGoals([]);
     setReviews([]);

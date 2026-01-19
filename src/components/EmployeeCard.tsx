@@ -10,8 +10,9 @@ interface EmployeeCardProps {
 }
 
 export function EmployeeCard({ employee, metrics, onClick }: EmployeeCardProps) {
-  const performanceColor = metrics?.performance_rating >= 4 ? 'text-green-600' : 
-                          metrics?.performance_rating >= 3 ? 'text-yellow-600' : 'text-red-600';
+  const performanceRating = employee?.performance_rating ?? metrics?.performance_rating;
+  const performanceColor = performanceRating >= 4 ? 'text-green-600' : 
+                          performanceRating >= 3 ? 'text-yellow-600' : 'text-red-600';
   
   return (
     <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer" onClick={onClick}>
@@ -54,7 +55,7 @@ export function EmployeeCard({ employee, metrics, onClick }: EmployeeCardProps) 
       <div className="flex items-center justify-between pt-4 border-t">
         <div className="flex items-center gap-2">
           <Award className={`w-5 h-5 ${performanceColor}`} />
-          <span className="text-sm font-medium">Rating: {metrics?.performance_rating ? Number(metrics.performance_rating).toFixed(1) : 'N/A'}</span>
+          <span className="text-sm font-medium">Rating: {performanceRating ? Number(performanceRating).toFixed(1) : 'N/A'}</span>
 
         </div>
         <Button variant="outline" size="sm">View Details</Button>

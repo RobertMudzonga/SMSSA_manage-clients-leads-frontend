@@ -106,8 +106,8 @@ export function EmployeeDetailModal({ employee, metrics, goals, reviews, open, o
                   <TrendingUp className="w-4 h-4 text-blue-600" />
                   <span className="text-sm text-gray-500">Projects</span>
                 </div>
-                <p className="text-2xl font-bold">{metrics?.projects_completed || 0}</p>
-                <p className="text-xs text-gray-500">{metrics?.projects_in_progress || 0} in progress</p>
+                <p className="text-2xl font-bold">{employee?.projects_count ?? metrics?.projects_completed ?? 0}</p>
+                <p className="text-xs text-gray-500">{employee?.projects_in_progress ?? metrics?.projects_in_progress ?? 0} in progress</p>
               </Card>
               
               <Card className="p-4">
@@ -115,7 +115,7 @@ export function EmployeeDetailModal({ employee, metrics, goals, reviews, open, o
                   <Target className="w-4 h-4 text-green-600" />
                   <span className="text-sm text-gray-500">Conversions</span>
                 </div>
-                <p className="text-2xl font-bold">{metrics?.prospects_converted || 0}</p>
+                <p className="text-2xl font-bold">{employee?.conversions_count ?? metrics?.prospects_converted ?? 0}</p>
                 <p className="text-xs text-gray-500">of {metrics?.prospects_created || 0} leads</p>
               </Card>
               
@@ -124,7 +124,7 @@ export function EmployeeDetailModal({ employee, metrics, goals, reviews, open, o
                   <span className="w-4 h-4 text-purple-600 font-medium">R</span>
                   <span className="text-sm text-gray-500">Revenue</span>
                 </div>
-                <p className="text-2xl font-bold">R{metrics?.revenue_generated?.toLocaleString() || 0}</p>
+                <p className="text-2xl font-bold">R{Number(employee?.total_revenue ?? metrics?.revenue_generated ?? 0).toLocaleString()}</p>
               </Card>
               
               <Card className="p-4">
@@ -132,7 +132,7 @@ export function EmployeeDetailModal({ employee, metrics, goals, reviews, open, o
                   <Award className="w-4 h-4 text-yellow-600" />
                   <span className="text-sm text-gray-500">Rating</span>
                 </div>
-                <p className="text-2xl font-bold">{metrics?.performance_rating ? Number(metrics.performance_rating).toFixed(1) : 'N/A'}</p>
+                <p className="text-2xl font-bold">{(employee?.performance_rating ?? metrics?.performance_rating) ? Number(employee?.performance_rating ?? metrics?.performance_rating).toFixed(1) : 'N/A'}</p>
 
               </Card>
             </div>
