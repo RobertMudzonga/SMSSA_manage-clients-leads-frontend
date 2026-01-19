@@ -512,7 +512,7 @@ export default function AppLayout() {
       const response = await fetch(`${API_BASE}/payment-requests/${id}/approve`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ approved_by: user?.user_id }),
+        body: JSON.stringify({ approved_by: user?.employee_id }),
       });
 
       if (response.ok) {
@@ -533,7 +533,7 @@ export default function AppLayout() {
       const response = await fetch(`${API_BASE}/payment-requests/${id}/reject`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ approved_by: user?.user_id, rejection_reason: reason }),
+        body: JSON.stringify({ approved_by: user?.employee_id, rejection_reason: reason }),
       });
 
       if (response.ok) {
@@ -554,7 +554,7 @@ export default function AppLayout() {
       const response = await fetch(`${API_BASE}/payment-requests/${id}/mark-paid`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ paid_by: user?.user_id }),
+        body: JSON.stringify({ paid_by: user?.employee_id }),
       });
 
       if (response.ok) {
