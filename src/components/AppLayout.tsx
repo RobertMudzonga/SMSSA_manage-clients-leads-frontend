@@ -282,11 +282,12 @@ export default function AppLayout() {
         'quote_accepted': 10,
         'engagement_sent': 11,
         'invoice_sent': 12,
-        'payment_date_confirmed': 13
+        'payment_date_confirmed': 13,
+        'won': 13,
+        'closed_won': 13
       };
-      // determine stage id (allow special tokens for won)
+      // determine stage id
       let stage_id = stageMapping[toStage as keyof typeof stageMapping];
-      if (!stage_id && (toStage === 'closed_won' || toStage === 'won')) stage_id = 6;
       if (!stage_id) {
         console.error('Invalid stage:', toStage);
         return null;
