@@ -93,19 +93,19 @@ export default function LeadDetailModal({
         <div className="p-6 space-y-6">
           {/* Contact Details */}
           <div className="grid grid-cols-2 gap-4">
-            <div>
+            <div className="min-w-0">
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 <Mail className="w-4 h-4 inline mr-1" />
                 Email
               </label>
-              <p className="text-gray-900">{lead.email || 'N/A'}</p>
+              <p className="text-gray-900 break-all overflow-wrap-anywhere">{lead.email || 'N/A'}</p>
             </div>
-            <div>
+            <div className="min-w-0">
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 <Phone className="w-4 h-4 inline mr-1" />
                 Phone
               </label>
-              <p className="text-gray-900">{lead.phone || 'N/A'}</p>
+              <p className="text-gray-900 break-all">{lead.phone || 'N/A'}</p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
