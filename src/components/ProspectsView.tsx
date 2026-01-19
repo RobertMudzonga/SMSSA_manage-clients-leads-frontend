@@ -161,11 +161,9 @@ export default function ProspectsView({
   };
 
   const wrappedMoveStage = async (prospectId: string, toStage: string) => {
-    if (toStage === 'closed_won' || toStage === 'won') {
-      await performMarkWon(prospectId);
-    } else {
-      await onMoveStage(prospectId, toStage);
-    }
+    // For pipeline interactions, send the stage change immediately.
+    // The tabular view still uses the explicit confirm modal via openConfirmWon.
+    await onMoveStage(prospectId, toStage);
   };
 
   const toggleStageCollapse = (stageKey: string) => {

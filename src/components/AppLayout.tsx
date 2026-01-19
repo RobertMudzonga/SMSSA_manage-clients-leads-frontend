@@ -268,6 +268,7 @@ export default function AppLayout() {
 
   const handleMoveStage = async (prospectId: string, toStage: string) => {
     try {
+      console.debug('[handleMoveStage] request', { prospectId, toStage });
       // Map stage strings to stage IDs
       const stageMapping = {
         'opportunity': 1,
@@ -303,6 +304,7 @@ export default function AppLayout() {
 
       const respJson = await response.json().catch(() => null);
       if (response.ok) {
+        console.debug('[handleMoveStage] success', respJson);
         loadData();
         return respJson;
       } else {
