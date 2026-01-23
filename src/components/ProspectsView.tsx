@@ -5,7 +5,7 @@ import PipelineColumn from './PipelineColumn';
 import PipelineStats from './PipelineStats';
 import AddProspectModal from './AddProspectModal';
 import ProspectDetailModal from './ProspectDetailModal';
-import { LayoutGrid, List } from 'lucide-react';
+import { LayoutGrid, List, Search } from 'lucide-react';
 import { API_BASE } from '../lib/api';
 
 interface ProspectsViewProps {
@@ -68,6 +68,7 @@ export default function ProspectsView({
   const [importPreviewOpen, setImportPreviewOpen] = useState(false);
   const [importPreviewRows, setImportPreviewRows] = useState<any[]>([]);
   const [importingFile, setImportingFile] = useState<File | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     loadEmployees();
@@ -83,9 +84,18 @@ export default function ProspectsView({
     }
   };
 
-  const filteredProspects = selectedSalesperson
-    ? prospects.filter(p => p.assigned_to === selectedSalesperson)
-    : prospects;
+  const filteredProspects = prospects.filter(p => {
+    const matchesSalesperson = selectedSalesperson ? p.assigned_to === selectedSalesperson : true;
+    const matchesSearch = searchTerm ? (
+      (p.first_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (p.last_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (p.deal_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (p.company || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (p.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (p.source || '').toLowerCase().includes(searchTerm.toLowerCase())
+    ) : true;
+    return matchesSalesperson && matchesSearch;
+  });
 
   function exportToCsv(filename: string, rows: any[]) {
     if (!rows || rows.length === 0) {
@@ -184,43 +194,56 @@ export default function ProspectsView({
 
       <PipelineStats prospects={filteredProspects} />
 
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div className="flex bg-gray-100 rounded-lg p-1">
-          <button
-            onClick={() => { setViewMode('pipeline'); setAutoMode(false); }}
-            className={`px-3 py-1 rounded ${viewMode === 'pipeline' ? 'bg-white shadow' : ''}`}
-          >
-            <LayoutGrid className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => { setViewMode('list'); setAutoMode(false); }}
-            className={`px-3 py-1 rounded ${viewMode === 'list' ? 'bg-white shadow' : ''}`}
-          >
-            <List className="w-4 h-4" />
-          </button>
+      <div className="flex flex-col gap-4">
+        {/* Search Bar */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search prospects by name, company, email, or source..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+          />
         </div>
 
-        <div className="flex gap-2 items-center flex-wrap">
-          <label className="text-sm font-medium text-gray-700">Filter by Salesperson:</label>
-          <select
-            value={selectedSalesperson || ''}
-            onChange={(e) => setSelectedSalesperson(e.target.value ? parseInt(e.target.value) : null)}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
-          >
-            <option value="">All Salespersons</option>
-            {employees.map(emp => {
-              const empId = emp.employee_id || emp.id;
-              const empName = emp.full_name || `${emp.first_name || ''} ${emp.last_name || ''}`.trim();
-              return (
-                <option key={empId} value={empId}>
-                  {empName}
-                </option>
-              );
-            })}
-          </select>
-        </div>
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="flex bg-gray-100 rounded-lg p-1">
+            <button
+              onClick={() => { setViewMode('pipeline'); setAutoMode(false); }}
+              className={`px-3 py-1 rounded ${viewMode === 'pipeline' ? 'bg-white shadow' : ''}`}
+            >
+              <LayoutGrid className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => { setViewMode('list'); setAutoMode(false); }}
+              className={`px-3 py-1 rounded ${viewMode === 'list' ? 'bg-white shadow' : ''}`}
+            >
+              <List className="w-4 h-4" />
+            </button>
+          </div>
 
-        <div className="flex items-center gap-2">
+          <div className="flex gap-2 items-center flex-wrap">
+            <label className="text-sm font-medium text-gray-700">Filter by Salesperson:</label>
+            <select
+              value={selectedSalesperson || ''}
+              onChange={(e) => setSelectedSalesperson(e.target.value ? parseInt(e.target.value) : null)}
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+            >
+              <option value="">All Salespersons</option>
+              {employees.map(emp => {
+                const empId = emp.employee_id || emp.id;
+                const empName = emp.full_name || `${emp.first_name || ''} ${emp.last_name || ''}`.trim();
+                return (
+                  <option key={empId} value={empId}>
+                    {empName}
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+
+          <div className="flex items-center gap-2">
           <button
             onClick={() => exportToCsv('prospects.csv', filteredProspects)}
             className="px-3 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300"
@@ -284,6 +307,7 @@ export default function ProspectsView({
             Add Prospect
           </button>
         </div>
+      </div>
       </div>
 
       {viewMode === 'pipeline' ? (

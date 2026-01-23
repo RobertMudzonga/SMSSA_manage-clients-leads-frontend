@@ -5,7 +5,7 @@ import ProjectCard from './ProjectCard';
 import CreateProjectModal from './CreateProjectModal';
 import ImportProjectsModal from './ImportProjectsModal';
 import GanttChart from './GanttChart';
-import { LayoutGrid, BarChart3 } from 'lucide-react';
+import { LayoutGrid, BarChart3, Search } from 'lucide-react';
 import ProjectsKanbanView from './ProjectsKanbanView';
 
 interface ProjectsViewProps {
@@ -58,11 +58,19 @@ export default function ProjectsView({ projects, onCreateProject, onProjectClick
 
   const filteredProjects = safeProjects.filter(p => {
     const name = (p && (p.project_name || p.name || ''));
+    const clientName = (p && (p.client_name || '')).toString();
+    const clientEmail = (p && (p.client_email || '')).toString();
     const status = (p && (p.status || '')).toString();
     const caseType = (p && (p.case_type || '')).toString();
     const managerName = (p && (p.project_manager_name || '')).toString();
     
-    const matchesSearch = name.toLowerCase().includes((searchTerm || '').toLowerCase());
+    const matchesSearch = searchTerm ? (
+      name.toLowerCase().includes((searchTerm || '').toLowerCase()) ||
+      clientName.toLowerCase().includes((searchTerm || '').toLowerCase()) ||
+      clientEmail.toLowerCase().includes((searchTerm || '').toLowerCase()) ||
+      caseType.toLowerCase().includes((searchTerm || '').toLowerCase()) ||
+      managerName.toLowerCase().includes((searchTerm || '').toLowerCase())
+    ) : true;
     const matchesStatus = filterStatus === 'all' || status.toLowerCase() === filterStatus.toLowerCase();
     const matchesVisaType = filterVisaType === 'all' || caseType === filterVisaType;
     const matchesManager = filterProjectManager === 'all' || managerName === filterProjectManager;
@@ -249,18 +257,24 @@ export default function ProjectsView({ projects, onCreateProject, onProjectClick
       </div>
 
       <div className="flex flex-col gap-4">
-        <div className="flex gap-4 flex-wrap">
+        {/* Search Bar */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
           <input
             type="text"
-            placeholder="Search projects..."
+            placeholder="Search projects by name, client, email, case type, or manager..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="flex-1 min-w-64 px-4 py-2 border border-gray-300 rounded-lg"
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
           />
+        </div>
+        
+        {/* Filters */}
+        <div className="flex gap-4 flex-wrap">
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg"
+            className="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
           >
             <option value="all">All Status</option>
             <option value="active">Active</option>
@@ -270,7 +284,7 @@ export default function ProjectsView({ projects, onCreateProject, onProjectClick
           <select
             value={filterVisaType}
             onChange={(e) => setFilterVisaType(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg"
+            className="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
           >
             <option value="all">All Visa Types</option>
             {uniqueVisaTypes.map((visaType) => (
@@ -280,7 +294,7 @@ export default function ProjectsView({ projects, onCreateProject, onProjectClick
           <select
             value={filterProjectManager}
             onChange={(e) => setFilterProjectManager(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg"
+            className="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
           >
             <option value="all">All Project Managers</option>
             {uniqueProjectManagers.map((manager) => (
