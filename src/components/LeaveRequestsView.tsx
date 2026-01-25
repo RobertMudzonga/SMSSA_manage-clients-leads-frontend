@@ -5,6 +5,7 @@ import { Badge } from './ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { API_BASE } from '../lib/api';
+import LeaveBalanceCounter from './LeaveBalanceCounter';
 
 interface LeaveRequest {
   id?: string;
@@ -19,6 +20,10 @@ interface LeaveRequest {
   created_at?: string;
   approved_by?: string;
   comments?: string;
+  days_requested?: number;
+  days_paid?: number;
+  days_unpaid?: number;
+  is_fully_paid?: boolean;
 }
 
 export default function LeaveRequestsView() {
@@ -167,6 +172,9 @@ export default function LeaveRequestsView() {
         <Button onClick={() => setIsModalOpen(true)}>Request Leave</Button>
       </div>
 
+      {/* Leave Balance Counter */}
+      <LeaveBalanceCounter />
+
       <div className="flex gap-2">
         {['all', 'pending', 'approved', 'rejected'].map(status => (
           <Button
@@ -268,12 +276,14 @@ export default function LeaveRequestsView() {
                   <p className="font-medium">{request.end_date ? new Date(request.end_date).toLocaleDateString() : 'N/A'}</p>
                 </div>
                 <div>
-                  <p className="text-gray-600">Requested</p>
-                  <p className="font-medium">{request.created_at ? new Date(request.created_at).toLocaleDateString() : 'N/A'}</p>
+                  <p className="text-gray-600">Days Requested</p>
+                  <p className="font-medium">{request.days_requested ? request.days_requested.toFixed(1) : 'N/A'}</p>
                 </div>
                 <div>
-                  <p className="text-gray-600">Approved By</p>
-                  <p className="font-medium text-xs">{request.approved_by || 'Pending'}</p>
+                  <p className="text-gray-600">Paid / Unpaid</p>
+                  <p className={`font-medium text-sm ${request.is_fully_paid ? 'text-green-600' : 'text-orange-600'}`}>
+                    {request.days_paid ? request.days_paid.toFixed(1) : '0'} / {request.days_unpaid ? request.days_unpaid.toFixed(1) : '0'}
+                  </p>
                 </div>
               </div>
 
