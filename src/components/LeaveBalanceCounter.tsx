@@ -6,12 +6,19 @@ import { useAuth } from '@/contexts/AuthContext';
 interface LeaveBalance {
   employeeId: number;
   year: number;
-  totalAllocated: number;
-  accruedToDate: number;
-  daysUsed: number;
-  daysRemaining: number;
+  totalAllocated: number | string;
+  accruedToDate: number | string;
+  daysUsed: number | string;
+  daysRemaining: number | string;
   lastAccrualDate: string;
 }
+
+// Helper function to safely convert to number
+const toNumber = (value: number | string | undefined): number => {
+  if (value === undefined || value === null || value === '') return 0;
+  const num = typeof value === 'string' ? parseFloat(value) : value;
+  return isNaN(num) ? 0 : num;
+};
 
 export default function LeaveBalanceCounter() {
   const [balance, setBalance] = useState<LeaveBalance | null>(null);
@@ -75,9 +82,9 @@ export default function LeaveBalanceCounter() {
     );
   }
 
-  const percentageUsed = (balance.daysUsed / balance.totalAllocated) * 100;
-  const percentageRemaining = (balance.daysRemaining / balance.totalAllocated) * 100;
-  const isNegative = balance.daysRemaining < 0;
+  const percentageUsed = (toNumber(balance.daysUsed) / toNumber(balance.totalAllocated)) * 100;
+  const percentageRemaining = (toNumber(balance.daysRemaining) / toNumber(balance.totalAllocated)) * 100;
+  const isNegative = toNumber(balance.daysRemaining) < 0;
 
   return (
     <Card className={`p-6 bg-gradient-to-br ${
@@ -95,7 +102,7 @@ export default function LeaveBalanceCounter() {
           <div className={`text-2xl font-bold ${
             isNegative ? 'text-red-600' : 'text-green-600'
           }`}>
-            {Math.abs(balance.daysRemaining).toFixed(1)}
+            {Math.abs(toNumber(balance.daysRemaining)).toFixed(1)}
           </div>
         </div>
 
@@ -107,7 +114,7 @@ export default function LeaveBalanceCounter() {
             </span>
           ) : (
             <span className="text-green-600">
-              {balance.daysRemaining.toFixed(1)} days remaining
+              {toNumber(balance.daysRemaining).toFixed(1)} days remaining
             </span>
           )}
         </div>
@@ -115,8 +122,8 @@ export default function LeaveBalanceCounter() {
         {/* Progress bar */}
         <div className="space-y-2">
           <div className="flex justify-between text-xs text-gray-600">
-            <span>Accrued: {balance.accruedToDate.toFixed(1)} days</span>
-            <span>Used: {balance.daysUsed.toFixed(1)} days</span>
+            <span>Accrued: {toNumber(balance.accruedToDate).toFixed(1)} days</span>
+            <span>Used: {toNumber(balance.daysUsed).toFixed(1)} days</span>
           </div>
           <div className="h-3 bg-gray-200 rounded-full overflow-hidden">
             <div 
@@ -140,19 +147,19 @@ export default function LeaveBalanceCounter() {
           <div className="text-center">
             <div className="text-xs text-gray-600 font-medium">Total</div>
             <div className="text-lg font-bold text-gray-800">
-              {balance.totalAllocated.toFixed(1)}
+              {toNumber(balance.totalAllocated).toFixed(1)}
             </div>
           </div>
           <div className="text-center">
             <div className="text-xs text-gray-600 font-medium">Accrued</div>
             <div className="text-lg font-bold text-blue-600">
-              {balance.accruedToDate.toFixed(1)}
+              {toNumber(balance.accruedToDate).toFixed(1)}
             </div>
           </div>
           <div className="text-center">
             <div className="text-xs text-gray-600 font-medium">Used</div>
             <div className="text-lg font-bold text-orange-600">
-              {balance.daysUsed.toFixed(1)}
+              {toNumber(balance.daysUsed).toFixed(1)}
             </div>
           </div>
         </div>
@@ -171,7 +178,7 @@ export default function LeaveBalanceCounter() {
         )}
 
         {/* Low balance warning */}
-        {!isNegative && balance.daysRemaining < 3 && balance.daysRemaining > 0 && (
+        {!isNegative && toNumber(balance.daysRemaining) < 3 && toNumber(balance.daysRemaining) > 0 && (
           <div className="text-xs text-orange-700 bg-orange-100 bg-opacity-70 p-3 rounded">
             <strong>⚠️ Note:</strong> You have less than 3 days remaining. 
             Plan your leave carefully to avoid unpaid leave.

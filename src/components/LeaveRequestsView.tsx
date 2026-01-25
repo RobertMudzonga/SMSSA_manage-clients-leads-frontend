@@ -20,11 +20,18 @@ interface LeaveRequest {
   created_at?: string;
   approved_by?: string;
   comments?: string;
-  days_requested?: number;
-  days_paid?: number;
-  days_unpaid?: number;
+  days_requested?: number | string;
+  days_paid?: number | string;
+  days_unpaid?: number | string;
   is_fully_paid?: boolean;
 }
+
+// Helper function to safely format numeric values
+const formatDays = (value: number | string | undefined | null, defaultValue = 'N/A') => {
+  if (value === undefined || value === null || value === '') return defaultValue;
+  const numValue = typeof value === 'string' ? parseFloat(value) : value;
+  return isNaN(numValue) ? defaultValue : numValue.toFixed(1);
+};
 
 export default function LeaveRequestsView() {
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
@@ -277,12 +284,12 @@ export default function LeaveRequestsView() {
                 </div>
                 <div>
                   <p className="text-gray-600">Days Requested</p>
-                  <p className="font-medium">{request.days_requested ? request.days_requested.toFixed(1) : 'N/A'}</p>
+                  <p className="font-medium">{formatDays(request.days_requested)}</p>
                 </div>
                 <div>
                   <p className="text-gray-600">Paid / Unpaid</p>
                   <p className={`font-medium text-sm ${request.is_fully_paid ? 'text-green-600' : 'text-orange-600'}`}>
-                    {request.days_paid ? request.days_paid.toFixed(1) : '0'} / {request.days_unpaid ? request.days_unpaid.toFixed(1) : '0'}
+                    {formatDays(request.days_paid, '0')} / {formatDays(request.days_unpaid, '0')}
                   </p>
                 </div>
               </div>
