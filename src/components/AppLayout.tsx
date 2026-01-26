@@ -304,8 +304,8 @@ export default function AppLayout() {
         'engagement_sent': 11,
         'invoice_sent': 12,
         'payment_date_confirmed': 13,
-        'won': 13,
-        'closed_won': 13
+        'won': 14,
+        'closed_won': 14
       };
       // determine stage id
       let stage_id = stageMapping[toStage as keyof typeof stageMapping];
