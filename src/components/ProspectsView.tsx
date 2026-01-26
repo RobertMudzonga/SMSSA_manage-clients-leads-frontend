@@ -102,8 +102,25 @@ export default function ProspectsView({
       toast({ title: 'No data to export' });
       return;
     }
+    
+    // Helper function to properly escape and quote CSV values
+    const escapeCsvValue = (value: any): string => {
+      if (value === null || value === undefined) return '""';
+      const str = String(value);
+      // Quote all fields and escape internal quotes
+      return `"${str.replace(/"/g, '""')}"`;
+    };
+    
     const keys = Object.keys(rows[0]);
-    const csv = [keys.join(',')].concat(rows.map(r => keys.map(k => `"${(r[k] ?? '').toString().replace(/"/g,'""')}"`).join(','))).join('\n');
+    // Create header row with properly quoted column names
+    const headerRow = keys.map(escapeCsvValue).join(',');
+    // Create data rows
+    const dataRows = rows.map(r => 
+      keys.map(k => escapeCsvValue(r[k])).join(',')
+    );
+    // Combine header and data with newlines
+    const csv = [headerRow, ...dataRows].join('\n');
+    
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);

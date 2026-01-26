@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { PhoneCall, Mail, UserCheck, RefreshCw, AlertTriangle, Loader } from 'lucide-react';
+import { PhoneCall, Mail, UserCheck, RefreshCw, AlertTriangle, Loader, Search } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Progress } from './ui/progress';
@@ -136,6 +136,7 @@ export default function ColdLeadsKanbanApp() {
     const [draggedLead, setDraggedLead] = useState(null);
     const [selectedLead, setSelectedLead] = useState(null);
     const [filterEmployeeId, setFilterEmployeeId] = useState('');
+    const [searchTerm, setSearchTerm] = useState('');
 
     // --- Helper to show toasts ---
     const showToast = useCallback((message, type = 'success') => {
@@ -152,6 +153,9 @@ export default function ColdLeadsKanbanApp() {
             if (filterEmployeeId) {
                 url.searchParams.append('assigned_employee_id', filterEmployeeId);
             }
+            if (searchTerm && searchTerm.trim()) {
+                url.searchParams.append('search', searchTerm.trim());
+            }
             const response = await fetch(url.toString());
             if (!response.ok) {
                 throw new Error('Failed to fetch leads');
@@ -164,7 +168,7 @@ export default function ColdLeadsKanbanApp() {
         } finally {
             setIsLoading(false);
         }
-    }, [filterEmployeeId]);
+    }, [filterEmployeeId, searchTerm]);
 
     const fetchEmployees = useCallback(async () => {
         try {
@@ -417,29 +421,43 @@ export default function ColdLeadsKanbanApp() {
     return (
         <div className="min-h-screen bg-gray-100 p-4 md:p-8">
             {/* Header */}
-            <div className="mb-6 flex justify-between items-center flex-wrap gap-4">
-                <h1 className="text-3xl font-extrabold text-gray-900">Cold Lead Management (Contact Funnel)</h1>
-                <div className="flex items-center gap-3">
-                    <select
-                        value={filterEmployeeId}
-                        onChange={(e) => setFilterEmployeeId(e.target.value)}
-                        className="px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm hover:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
-                    >
-                        <option value="">All Assignees</option>
-                        <option value="unassigned">Unassigned</option>
-                        {employees.filter(emp => emp.is_active).map((employee) => (
-                            <option key={employee.id} value={employee.id}>
-                                {employee.full_name}
-                            </option>
-                        ))}
-                    </select>
-                    <button 
-                        onClick={fetchLeads} 
-                        className="flex items-center space-x-2 px-4 py-2 bg-teal-600 text-white rounded-lg shadow-md hover:bg-teal-700 transition"
-                    >
-                        <RefreshCw className="w-4 h-4" />
-                        <span className="text-sm">Refresh</span>
-                    </button>
+            <div className="mb-6">
+                <div className="flex justify-between items-center flex-wrap gap-4 mb-4">
+                    <h1 className="text-3xl font-extrabold text-gray-900">Cold Lead Management (Contact Funnel)</h1>
+                    <div className="flex items-center gap-3">
+                        <select
+                            value={filterEmployeeId}
+                            onChange={(e) => setFilterEmployeeId(e.target.value)}
+                            className="px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm hover:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
+                        >
+                            <option value="">All Assignees</option>
+                            <option value="unassigned">Unassigned</option>
+                            {employees.filter(emp => emp.is_active).map((employee) => (
+                                <option key={employee.id} value={employee.id}>
+                                    {employee.full_name}
+                                </option>
+                            ))}
+                        </select>
+                        <button 
+                            onClick={fetchLeads} 
+                            className="flex items-center space-x-2 px-4 py-2 bg-teal-600 text-white rounded-lg shadow-md hover:bg-teal-700 transition"
+                        >
+                            <RefreshCw className="w-4 h-4" />
+                            <span className="text-sm">Refresh</span>
+                        </button>
+                    </div>
+                </div>
+                
+                {/* Search Bar */}
+                <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <input
+                        type="text"
+                        placeholder="Search leads by name, company, email, or phone..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm hover:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
+                    />
                 </div>
             </div>
             
