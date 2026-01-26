@@ -103,31 +103,35 @@ export default function ProspectsView({
       return;
     }
     
-    // Helper function to properly escape and quote CSV values
-    const escapeCsvValue = (value: any): string => {
-      if (value === null || value === undefined) return '""';
-      const str = String(value);
-      // Quote all fields and escape internal quotes
-      return `"${str.replace(/"/g, '""')}"`;
-    };
-    
     const keys = Object.keys(rows[0]);
-    // Create header row with properly quoted column names
-    const headerRow = keys.map(escapeCsvValue).join(',');
-    // Create data rows
-    const dataRows = rows.map(r => 
-      keys.map(k => escapeCsvValue(r[k])).join(',')
-    );
-    // Combine header and data with CRLF line endings for Excel compatibility
-    const csv = [headerRow, ...dataRows].join('\r\n');
     
-    // Add UTF-8 BOM to help Excel recognize encoding
-    const BOM = '\uFEFF';
-    const csvWithBom = BOM + csv;
-    const blob = new Blob([csvWithBom], { type: 'text/csv;charset=utf-8;' });
+    // Create HTML table format that Excel will parse correctly
+    let html = '<table><thead><tr>';
+    
+    // Add header row
+    for (const key of keys) {
+      const escapedKey = String(key).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      html += `<th>${escapedKey}</th>`;
+    }
+    html += '</tr></thead><tbody>';
+    
+    // Add data rows
+    for (const row of rows) {
+      html += '<tr>';
+      for (const key of keys) {
+        const value = row[key];
+        const escapedValue = String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        html += `<td>${escapedValue}</td>`;
+      }
+      html += '</tr>';
+    }
+    html += '</tbody></table>';
+    
+    // Create blob with HTML content (Excel recognizes this format)
+    const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.setAttribute('download', filename);
+    link.setAttribute('download', filename.replace('.csv', '.xls'));
     document.body.appendChild(link);
     link.click();
     link.remove();
