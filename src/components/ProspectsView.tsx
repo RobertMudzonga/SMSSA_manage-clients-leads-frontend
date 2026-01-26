@@ -118,10 +118,13 @@ export default function ProspectsView({
     const dataRows = rows.map(r => 
       keys.map(k => escapeCsvValue(r[k])).join(',')
     );
-    // Combine header and data with newlines
-    const csv = [headerRow, ...dataRows].join('\n');
+    // Combine header and data with CRLF line endings for Excel compatibility
+    const csv = [headerRow, ...dataRows].join('\r\n');
     
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    // Add UTF-8 BOM to help Excel recognize encoding
+    const BOM = '\uFEFF';
+    const csvWithBom = BOM + csv;
+    const blob = new Blob([csvWithBom], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.setAttribute('download', filename);
