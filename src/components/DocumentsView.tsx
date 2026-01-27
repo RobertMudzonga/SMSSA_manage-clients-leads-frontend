@@ -8,6 +8,7 @@ import DocumentVersionHistory from './DocumentVersionHistory';
 import { CLIENT_UPLOADS_ENABLED } from '@/utils/documentSettings';
 import useProjectFolders from '@/hooks/useProjectFolders';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+import { API_BASE } from '@/lib/api';
 
 interface DocumentsViewProps {
   documents: any[];
@@ -41,6 +42,11 @@ export default function DocumentsView({ documents, onUploadDocument, onDownload,
     loadingDocs,
     error
   } = useProjectFolders();
+
+  const buildDownloadUrl = (id: number | string) => {
+    const base = /^https?:\/\//i.test(API_BASE) ? API_BASE.replace(/\/$/, '') : '';
+    return `${base}/api/documents/${id}/download`;
+  };
 
   const filteredDocuments = documents.filter(d => {
     const matchesSearch = d.document_name.toLowerCase().includes(searchTerm.toLowerCase());
@@ -230,7 +236,7 @@ export default function DocumentsView({ documents, onUploadDocument, onDownload,
                 {folderDocuments.map(d => (
                   <li key={d.document_id || d.document_id} className="flex items-center justify-between">
                     <div className="text-sm">{d.name || d.document_name} <span className="text-xs text-gray-400">({d.size || d.file_size} bytes)</span></div>
-                    <a className="text-sky-600 text-sm" href={`/api/documents/${d.document_id || d.document_id}/download`}>Download</a>
+                    <a className="text-sky-600 text-sm" href={buildDownloadUrl(d.document_id || d.document_id)}>Download</a>
                   </li>
                 ))}
               </ul>

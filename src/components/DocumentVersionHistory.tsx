@@ -4,6 +4,7 @@ import { Card } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { API_BASE } from '@/lib/api';
 
 interface DocumentVersion {
   document_id: number;
@@ -88,7 +89,8 @@ export default function DocumentVersionHistory({ documentId, onNewVersion }: Doc
   };
 
   const downloadVersion = (versionId: number) => {
-    window.open(`/api/documents/${versionId}/download`, '_blank');
+    const base = /^https?:\/\//i.test(API_BASE) ? API_BASE.replace(/\/$/, '') : '';
+    window.open(`${base}/api/documents/${versionId}/download`, '_blank');
   };
 
   const formatDate = (dateString: string) => {

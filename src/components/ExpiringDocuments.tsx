@@ -4,6 +4,7 @@ import { Card } from './ui/card';
 import { Badge } from './ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from './ui/button';
+import { API_BASE } from '@/lib/api';
 
 interface ExpiringDocument {
   document_id: number;
@@ -53,7 +54,8 @@ export default function ExpiringDocuments({ projectId }: ExpiringDocumentsProps)
   };
 
   const downloadDocument = async (docId: number) => {
-    window.open(`/api/documents/${docId}/download`, '_blank');
+    const base = /^https?:\/\//i.test(API_BASE) ? API_BASE.replace(/\/$/, '') : '';
+    window.open(`${base}/api/documents/${docId}/download`, '_blank');
   };
 
   const getUrgencyBadge = (daysUntil: number) => {
