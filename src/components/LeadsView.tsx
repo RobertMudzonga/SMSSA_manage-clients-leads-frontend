@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { PhoneCall, Mail, UserCheck, RefreshCw, AlertTriangle, Loader, Search } from 'lucide-react';
+import { PhoneCall, Mail, UserCheck, RefreshCw, AlertTriangle, Loader, Search, Send } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Progress } from './ui/progress';
@@ -54,7 +54,7 @@ const Toast = ({ message, type, onClose }) => {
 /**
  * Cold Lead Card Component (Draggable)
  */
-const ColdLeadCard = ({ lead, onDragStart, onAdvanceStage, onClick }) => {
+const ColdLeadCard = ({ lead, onDragStart, onAdvanceStage, onQuoteSent, onClick }) => {
     // Get lead name from multiple sources
     const getLeadName = () => {
         if (lead.first_name || lead.last_name) {
@@ -110,16 +110,30 @@ const ColdLeadCard = ({ lead, onDragStart, onAdvanceStage, onClick }) => {
             </div>
 
             <Progress value={((lead.current_stage_id - 101) / 3) * 100} className="my-2" />
-            <Button 
-                onClick={(e) => {
-                    e.stopPropagation();
-                    onAdvanceStage();
-                }} 
-                disabled={lead.current_stage_id === 104}
-                className="w-full"
-            >
-                {lead.current_stage_id === 104 ? 'Converted' : 'Advance Stage'}
-            </Button>
+            <div className="flex gap-2">
+                <Button 
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onAdvanceStage();
+                    }} 
+                    disabled={lead.current_stage_id === 104}
+                    className="flex-1"
+                    variant="outline"
+                >
+                    {lead.current_stage_id === 104 ? 'Converted' : 'Advance Stage'}
+                </Button>
+                <Button 
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onQuoteSent();
+                    }} 
+                    disabled={lead.current_stage_id === 104}
+                    className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                >
+                    <Send className="w-4 h-4 mr-2" />
+                    Quote Sent
+                </Button>
+            </div>
         </Card>
     );
 };
@@ -489,6 +503,7 @@ export default function ColdLeadsKanbanApp() {
                                     lead={lead} 
                                     onDragStart={handleDragStart} 
                                     onAdvanceStage={() => advanceStage(lead.lead_id)}
+                                    onQuoteSent={() => convertLeadToOpportunity(lead.lead_id)}
                                     onClick={() => setSelectedLead(lead)}
                                 />
                             ))}
