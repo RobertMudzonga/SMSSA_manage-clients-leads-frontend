@@ -16,7 +16,8 @@ export default function UploadDocumentModal({ isOpen, onClose, onSubmit, project
   const [formData, setFormData] = useState({
     document_name: '',
     document_type: 'Passport',
-    signature_required: false
+    signature_required: false,
+    expiry_date: ''
   });
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -60,6 +61,9 @@ export default function UploadDocumentModal({ isOpen, onClose, onSubmit, project
       fd.append('document_name', formData.document_name);
       fd.append('document_type', formData.document_type);
       fd.append('signature_required', String(formData.signature_required));
+      if (formData.expiry_date) {
+        fd.append('expiry_date', formData.expiry_date);
+      }
 
       const headers: Record<string,string> = {};
       if (user && user.email) headers['x-user-email'] = user.email;
@@ -75,7 +79,7 @@ export default function UploadDocumentModal({ isOpen, onClose, onSubmit, project
       } else {
         // backend returns created document
         onSubmit(json.document || json);
-        setFormData({ document_name: '', document_type: 'Passport', signature_required: false });
+        setFormData({ document_name: '', document_type: 'Passport', signature_required: false, expiry_date: '' });
         setFile(null);
       }
     } catch (error) {
@@ -111,6 +115,17 @@ export default function UploadDocumentModal({ isOpen, onClose, onSubmit, project
             <option>Employment Letter</option>
             <option>Bank Statement</option>
           </select>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Expiry Date (Optional)</label>
+            <input
+              type="date"
+              value={formData.expiry_date}
+              onChange={(e) => setFormData({...formData, expiry_date: e.target.value})}
+              className="w-full px-3 py-2 border rounded-lg"
+              placeholder="Document expiry date"
+            />
+          </div>
           
           <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
             <input
