@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { History, Download, Upload } from 'lucide-react';
+import { History, Download, Upload, Eye, Trash2 } from 'lucide-react';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { API_BASE } from '@/lib/api';
+import DocumentPreviewModal from './DocumentPreviewModal';
 
 interface DocumentVersion {
   document_id: number;
@@ -26,6 +27,9 @@ export default function DocumentVersionHistory({ documentId, onNewVersion }: Doc
   const [versions, setVersions] = useState<DocumentVersion[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [previewDocId, setPreviewDocId] = useState<number | null>(null);
+  const [previewDocName, setPreviewDocName] = useState('');
+  const [previewDocMime, setPreviewDocMime] = useState<string | undefined>();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -93,6 +97,29 @@ export default function DocumentVersionHistory({ documentId, onNewVersion }: Doc
     window.open(`${base}/api/documents/${versionId}/download`, '_blank');
   };
 
+  const handleDeleteVersion = async (versionId: number) => {
+    if (!confirm('Are you sure you want to delete this version?')) return;
+    try {
+      const base = /^https?:\/\//i.test(API_BASE) ? API_BASE.replace(/\/$/, '') : '';
+      const res = await fetch(`${base}/api/documents/${versionId}`, { method: 'DELETE' });
+      if (res.ok) {
+        toast({ title: 'Version deleted successfully' });
+        loadVersions();
+      } else {
+        toast({ title: 'Failed to delete version', variant: 'destructive' });
+      }
+    } catch (error) {
+      console.error('Delete error:', error);
+      toast({ title: 'Error deleting version', variant: 'destructive' });
+    }
+  };
+
+  const handlePreviewVersion = (versionId: number, name: string, mimeType: string) => {
+    setPreviewDocId(versionId);
+    setPreviewDocName(name);
+    setPreviewDocMime(mimeType);
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString();
   };
@@ -156,13 +183,30 @@ export default function DocumentVersionHistory({ documentId, onNewVersion }: Doc
                 {formatDate(version.created_at)} • {version.uploaded_by} • {formatFileSize(version.size)}
               </div>
             </div>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => downloadVersion(version.document_id)}
-            >
-              <Download className="h-4 w-4" />
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handlePreviewVersion(version.document_id, version.name, version.mime_type)}
+              >
+                <Eye className="h-4 w-4" />
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => downloadVersion(version.document_id)}
+              >
+                <Download className="h-4 w-4" />
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handleDeleteVersion(version.document_id)}
+                className="text-red-600 hover:text-red-700"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         ))}
       </div>
@@ -171,6 +215,15 @@ export default function DocumentVersionHistory({ documentId, onNewVersion }: Doc
         <div className="text-center text-gray-600 py-4">
           No version history available
         </div>
+      )}
+      
+      {previewDocId && (
+        <DocumentPreviewModal
+          documentId={previewDocId}
+          documentName={previewDocName}
+          mimeType={previewDocMime}
+          onClose={() => setPreviewDocId(null)}
+        />
       )}
     </Card>
   );

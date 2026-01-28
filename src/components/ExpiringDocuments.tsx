@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { AlertTriangle, Download, Calendar } from 'lucide-react';
+import { AlertTriangle, Download, Calendar, Trash2, Eye } from 'lucide-react';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from './ui/button';
 import { API_BASE } from '@/lib/api';
+import DocumentPreviewModal from './DocumentPreviewModal';
 
 interface ExpiringDocument {
   document_id: number;
@@ -26,6 +27,9 @@ export default function ExpiringDocuments({ projectId }: ExpiringDocumentsProps)
   const [documents, setDocuments] = useState<ExpiringDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [days, setDays] = useState(30);
+  const [previewDocId, setPreviewDocId] = useState<number | null>(null);
+  const [previewDocName, setPreviewDocName] = useState('');
+  const [previewDocMime, setPreviewDocMime] = useState<string | undefined>();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -56,6 +60,29 @@ export default function ExpiringDocuments({ projectId }: ExpiringDocumentsProps)
   const downloadDocument = async (docId: number) => {
     const base = /^https?:\/\//i.test(API_BASE) ? API_BASE.replace(/\/$/, '') : '';
     window.open(`${base}/api/documents/${docId}/download`, '_blank');
+  };
+
+  const handleDeleteDocument = async (docId: number) => {
+    if (!confirm('Are you sure you want to delete this document?')) return;
+    try {
+      const base = /^https?:\/\//i.test(API_BASE) ? API_BASE.replace(/\/$/, '') : '';
+      const res = await fetch(`${base}/api/documents/${docId}`, { method: 'DELETE' });
+      if (res.ok) {
+        toast({ title: 'Document deleted successfully' });
+        setDocuments(documents.filter(d => d.document_id !== docId));
+      } else {
+        toast({ title: 'Failed to delete document', variant: 'destructive' });
+      }
+    } catch (error) {
+      console.error('Delete error:', error);
+      toast({ title: 'Error deleting document', variant: 'destructive' });
+    }
+  };
+
+  const handlePreviewDocument = (docId: number, name: string) => {
+    setPreviewDocId(docId);
+    setPreviewDocName(name);
+    setPreviewDocMime('application/pdf');
   };
 
   const getUrgencyBadge = (daysUntil: number) => {
@@ -118,14 +145,37 @@ export default function ExpiringDocuments({ projectId }: ExpiringDocumentsProps)
               <Button
                 size="sm"
                 variant="outline"
+                onClick={() => handlePreviewDocument(doc.document_id, doc.name)}
+              >
+                <Eye className="h-4 w-4" />
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
                 onClick={() => downloadDocument(doc.document_id)}
               >
                 <Download className="h-4 w-4" />
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handleDeleteDocument(doc.document_id)}
+                className="text-red-600 hover:text-red-700"
+              >
+                <Trash2 className="h-4 w-4" />
               </Button>
             </div>
           </div>
         ))}
       </div>
+      {previewDocId && (
+        <DocumentPreviewModal
+          documentId={previewDocId}
+          documentName={previewDocName}
+          mimeType={previewDocMime}
+          onClose={() => setPreviewDocId(null)}
+        />
+      )}
     </Card>
   );
 }

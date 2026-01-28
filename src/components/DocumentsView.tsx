@@ -8,8 +8,8 @@ import DocumentVersionHistory from './DocumentVersionHistory';
 import { CLIENT_UPLOADS_ENABLED } from '@/utils/documentSettings';
 import useProjectFolders from '@/hooks/useProjectFolders';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import { API_BASE } from '@/lib/api';
-
+import { API_BASE } from '@/lib/api';import DocumentPreviewModal from './DocumentPreviewModal';
+import { Trash2, Eye } from 'lucide-react';
 interface DocumentsViewProps {
   documents: any[];
   onUploadDocument: (data: any) => void;
@@ -25,6 +25,9 @@ export default function DocumentsView({ documents, onUploadDocument, onDownload,
   const [uploading, setUploading] = useState(false);
   const [selectedDocForVersions, setSelectedDocForVersions] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState('all');
+  const [previewDocId, setPreviewDocId] = useState<number | null>(null);
+  const [previewDocName, setPreviewDocName] = useState('');
+  const [previewDocMime, setPreviewDocMime] = useState<string | undefined>();
 
   const {
     projects,
@@ -46,6 +49,29 @@ export default function DocumentsView({ documents, onUploadDocument, onDownload,
   const buildDownloadUrl = (id: number | string) => {
     const base = /^https?:\/\//i.test(API_BASE) ? API_BASE.replace(/\/$/, '') : '';
     return `${base}/api/documents/${id}/download`;
+  };
+
+  const handleDeleteDocument = async (docId: number) => {
+    if (!confirm('Are you sure you want to delete this document?')) return;
+    try {
+      const base = /^https?:\/\//i.test(API_BASE) ? API_BASE.replace(/\/$/, '') : '';
+      const res = await fetch(`${base}/api/documents/${docId}`, { method: 'DELETE' });
+      if (res.ok) {
+        toast({ title: 'Document deleted successfully' });
+        if (selectedFolderId) fetchDocsForFolder(selectedFolderId);
+      } else {
+        toast({ title: 'Failed to delete document', variant: 'destructive' });
+      }
+    } catch (error) {
+      console.error('Delete error:', error);
+      toast({ title: 'Error deleting document', variant: 'destructive' });
+    }
+  };
+
+  const handlePreviewDocument = (docId: number, name: string, mime?: string) => {
+    setPreviewDocId(docId);
+    setPreviewDocName(name);
+    setPreviewDocMime(mime);
   };
 
   const filteredDocuments = documents.filter(d => {
@@ -234,9 +260,26 @@ export default function DocumentsView({ documents, onUploadDocument, onDownload,
                 {loadingDocs && <li className="text-sm text-gray-500">Loading files...</li>}
                 {!loadingDocs && folderDocuments.length === 0 && <li className="text-sm text-gray-500">No files</li>}
                 {folderDocuments.map(d => (
-                  <li key={d.document_id || d.document_id} className="flex items-center justify-between">
-                    <div className="text-sm">{d.name || d.document_name} <span className="text-xs text-gray-400">({d.size || d.file_size} bytes)</span></div>
-                    <a className="text-sky-600 text-sm" href={buildDownloadUrl(d.document_id || d.document_id)}>Download</a>
+                  <li key={d.document_id || d.document_id} className="flex items-center justify-between p-2 hover:bg-gray-50 rounded">
+                    <div className="text-sm flex-1">{d.name || d.document_name} <span className="text-xs text-gray-400">({d.size || d.file_size} bytes)</span></div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handlePreviewDocument(d.document_id, d.name || d.document_name, d.mime_type)}
+                        className="text-sky-600 text-sm hover:text-sky-700 inline-flex items-center gap-1"
+                        title="Preview"
+                      >
+                        <Eye className="h-4 w-4" />
+                        Preview
+                      </button>
+                      <a className="text-sky-600 text-sm hover:text-sky-700" href={buildDownloadUrl(d.document_id || d.document_id)}>Download</a>
+                      <button
+                        onClick={() => handleDeleteDocument(d.document_id)}
+                        className="text-red-600 text-sm hover:text-red-700 inline-flex items-center gap-1"
+                        title="Delete"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   </li>
                 ))}
               </ul>
@@ -253,16 +296,21 @@ export default function DocumentsView({ documents, onUploadDocument, onDownload,
           if (res && res.error) {
             toast({ title: 'Upload failed', description: res.error?.message || 'Failed to save document record', variant: 'destructive' });
           } else {
-            // close modal and optionally refresh folder documents
             setIsModalOpen(false);
-            // if this document belongs to the currently selected project, refresh folder list
             if (String(data.project_id) === String(selectedProjectId)) {
-              // refresh folders and docs
               fetchFoldersForProject(selectedProjectId);
             }
           }
         }}
         projectId={selectedProjectId}
+      />
+
+      <DocumentPreviewModal
+        isOpen={previewDocId !== null}
+        documentId={previewDocId || 0}
+        documentName={previewDocName}
+        mimeType={previewDocMime}
+        onClose={() => setPreviewDocId(null)}
       />
     </div>
   );
