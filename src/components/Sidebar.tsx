@@ -27,7 +27,7 @@ export default function Sidebar({ activeTab, onTabChange, isOpen = false, onClos
   return (
     <>
       {/* Desktop sidebar */}
-      <div className="hidden md:flex w-64 bg-gradient-to-b from-slate-900 to-slate-800 text-white h-screen fixed left-0 top-0 flex-col">
+      <aside className="hidden md:flex w-64 bg-gradient-to-b from-slate-900 to-slate-800 text-white flex-col h-screen sticky top-0">
         <div className="p-6 border-b border-slate-700">
           <h1 className="text-2xl font-bold text-teal-400">ImmigratePro</h1>
           <p className="text-sm text-gray-400 mt-1">Case Management</p>
@@ -59,7 +59,7 @@ export default function Sidebar({ activeTab, onTabChange, isOpen = false, onClos
             </div>
           </div>
         </div>
-      </div>
+      </aside>
 
       {/* Mobile sliding sidebar */}
       <div className={`md:hidden fixed inset-0 z-40 ${isOpen ? '' : 'pointer-events-none'}`} aria-hidden={!isOpen}>

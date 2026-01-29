@@ -616,7 +616,8 @@ export default function AppLayout() {
     <NotificationProvider employeeId={user?.employee_id}>
       <div className="flex min-h-screen bg-gray-50">
         <Sidebar activeTab={activeTab} onTabChange={setActiveTab} isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
-        <div className="md:ml-64 flex-1 p-4 md:p-8">
+        <main className="flex-1 overflow-auto">
+          <div className="p-4 md:p-8">
           {/* Mobile top bar */}
           <div className="md:hidden flex items-center justify-between mb-4">
             <button onClick={() => setIsSidebarOpen(true)} className="px-3 py-2 bg-white rounded shadow">
@@ -710,8 +711,9 @@ export default function AppLayout() {
             onDelete={handleDeletePaymentRequest}
           />
         )}
+          </div>
+        </main>
       </div>
-    </div>
     </NotificationProvider>
   );
 }
