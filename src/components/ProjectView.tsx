@@ -11,9 +11,10 @@ import { useAuth } from '@/contexts/AuthContext';
 interface ProjectViewProps {
   projectId: string;
   onClose: () => void;
+  onDataChange?: () => void;
 }
 
-export default function ProjectView({ projectId, onClose }: ProjectViewProps) {
+export default function ProjectView({ projectId, onClose, onDataChange }: ProjectViewProps) {
   const [project, setProject] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [stage, setStage] = useState<number>(1);
@@ -576,6 +577,111 @@ export default function ProjectView({ projectId, onClose }: ProjectViewProps) {
               </div>
             </Card>
           )}
+
+          {/* Payment Tracking Section */}
+          <Card className="p-4">
+            <h3 className="font-semibold mb-4">Project Payment Tracking</h3>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+              <div className="bg-blue-50 p-3 rounded">
+                <p className="text-xs text-gray-600">Quote Amount</p>
+                <p className="text-lg font-semibold text-blue-900">R{(parseFloat(project?.payment_amount || 0)).toFixed(2)}</p>
+              </div>
+              <div className="bg-green-50 p-3 rounded">
+                <p className="text-xs text-gray-600">Amount Received</p>
+                <p className="text-lg font-semibold text-green-900">R{(parseFloat(project?.payment_received || 0)).toFixed(2)}</p>
+              </div>
+              <div className="bg-orange-50 p-3 rounded">
+                <p className="text-xs text-gray-600">Remaining Balance</p>
+                <p className="text-lg font-semibold text-orange-900">R{(parseFloat(project?.remaining_balance || 0)).toFixed(2)}</p>
+              </div>
+              <div className="bg-purple-50 p-3 rounded">
+                <p className="text-xs text-gray-600">Payment Status</p>
+                <p className="text-sm font-semibold">
+                  {project?.payment_status === 'fully_paid' && <span className="text-green-600">✓ Fully Paid</span>}
+                  {project?.payment_status === 'partially_paid' && <span className="text-orange-600">⊘ Partially Paid</span>}
+                  {project?.payment_status === 'pending' && <span className="text-gray-600">○ Pending</span>}
+                </p>
+              </div>
+            </div>
+
+            {/* Record Payment Section */}
+            <div className="border-t pt-4">
+              <h4 className="font-semibold mb-3">Record Payment</h4>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
+                <div>
+                  <label className="text-sm">Amount Received (R)</label>
+                  <input 
+                    type="number" 
+                    step="0.01" 
+                    placeholder="Enter amount" 
+                    className="w-full p-2 border rounded"
+                    id="paymentAmount"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm">Payment Date</label>
+                  <input 
+                    type="date" 
+                    className="w-full p-2 border rounded"
+                    id="paymentDate"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm">Notes</label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g., Cheque #123" 
+                    className="w-full p-2 border rounded"
+                    id="paymentNotes"
+                  />
+                </div>
+              </div>
+              <Button 
+                className="mt-3 bg-green-600 hover:bg-green-700"
+                onClick={async () => {
+                  const amount = (document.getElementById('paymentAmount') as HTMLInputElement)?.value;
+                  const date = (document.getElementById('paymentDate') as HTMLInputElement)?.value;
+                  const notes = (document.getElementById('paymentNotes') as HTMLInputElement)?.value;
+
+                  if (!amount || parseFloat(amount) <= 0) {
+                    toast({ title: 'Invalid amount', variant: 'destructive' });
+                    return;
+                  }
+
+                  try {
+                    const res = await fetch(`/api/projects/${projectId}/payment`, {
+                      method: 'PUT',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        amount_received: parseFloat(amount),
+                        payment_date: date || new Date().toISOString(),
+                        notes: notes || null
+                      })
+                    });
+
+                    if (!res.ok) {
+                      const txt = await res.text();
+                      console.error('Payment record failed', res.status, txt);
+                      toast({ title: 'Payment failed', variant: 'destructive' });
+                      return;
+                    }
+
+                    toast({ title: 'Payment recorded successfully' });
+                    (document.getElementById('paymentAmount') as HTMLInputElement).value = '';
+                    (document.getElementById('paymentDate') as HTMLInputElement).value = '';
+                    (document.getElementById('paymentNotes') as HTMLInputElement).value = '';
+                    loadProject();
+                    if (onDataChange) onDataChange();
+                  } catch (err) {
+                    console.error('Payment record error', err);
+                    toast({ title: 'Error recording payment', variant: 'destructive' });
+                  }
+                }}
+              >
+                Record Payment
+              </Button>
+            </div>
+          </Card>
 
           {isAdmin && (
             <Card className="p-4">

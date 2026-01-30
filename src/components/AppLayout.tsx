@@ -587,6 +587,27 @@ export default function AppLayout() {
     }
   };
 
+  const projectsRevenue = projects.reduce((sum, p) => {
+    const amount = p.payment_amount ? parseFloat(p.payment_amount) : 0;
+    return sum + (isNaN(amount) ? 0 : amount);
+  }, 0);
+
+  const projectsRevenueReceived = projects.reduce((sum, p) => {
+    const received = p.payment_received ? parseFloat(p.payment_received) : 0;
+    return sum + (isNaN(received) ? 0 : received);
+  }, 0);
+
+  // Get prospects revenue - sum of forecast_amount where stage is 14 (won)
+  const prospectsRevenue = prospects.reduce((sum, p) => {
+    // Won prospects have current_stage_id = 14 or status = 'won'
+    const isWon = p.current_stage_id === 14 || (p.status && p.status.toLowerCase() === 'won');
+    if (isWon) {
+      const amount = p.forecast_amount ? parseFloat(p.forecast_amount) : 0;
+      return sum + (isNaN(amount) ? 0 : amount);
+    }
+    return sum;
+  }, 0);
+
   const stats = {
     totalProspects: prospects.length,
     activeProjects: projects.filter(p => {
@@ -598,7 +619,10 @@ export default function AppLayout() {
       return s === 'submitted';
     }).length,
     pendingDocuments: documents.filter(d => d.status === 'pending').length,
-    revenue: projects.reduce((sum, p) => sum + (parseFloat(p.payment_amount) || 0), 0)
+    projectsRevenue,
+    projectsRevenueReceived,
+    prospectsRevenue,
+    totalRevenue: projectsRevenueReceived + prospectsRevenue
   };
 
   const clientData = {
@@ -614,9 +638,9 @@ export default function AppLayout() {
 
   return (
     <NotificationProvider employeeId={user?.employee_id}>
-      <div className="flex min-h-screen bg-gray-50">
+      <div className="flex min-h-screen bg-gray-50 w-full h-screen">
         <Sidebar activeTab={activeTab} onTabChange={setActiveTab} isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
-        <main className="flex-1 overflow-auto">
+        <main className="flex-1 overflow-auto md:ml-64 w-full">
           <div className="p-4 md:p-8">
           {/* Mobile top bar */}
           <div className="md:hidden flex items-center justify-between mb-4">
@@ -679,6 +703,7 @@ export default function AppLayout() {
           <ProjectView
             projectId={selectedProjectForChecklist}
             onClose={() => setSelectedProjectForChecklist(null)}
+            onDataChange={loadData}
           />
         )}
 

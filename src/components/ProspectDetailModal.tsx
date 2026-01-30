@@ -9,7 +9,6 @@ interface ProspectDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   onUpdate: (id: string, data: any) => Promise<boolean>;
-  onScheduleFollowUp: (prospectId: string, type: string, date: string) => void;
   onDelete?: (id: string) => void;
   onMarkLost?: (id: string, reason?: string) => void;
   onSetTags?: (id: string, tagIds: number[]) => void;
@@ -20,15 +19,10 @@ export default function ProspectDetailModal({
   isOpen, 
   onClose, 
   onUpdate,
-  onScheduleFollowUp,
   onDelete,
   onMarkLost,
   onSetTags
 }: ProspectDetailModalProps) {
-  const [quoteAmount, setQuoteAmount] = useState(prospect?.quote_amount || '');
-  const [discountAmount, setDiscountAmount] = useState(prospect?.discount_amount || '');
-  const [followUpType, setFollowUpType] = useState('first_follow_up');
-  const [followUpDate, setFollowUpDate] = useState('');
   const [notes, setNotes] = useState('');
   const [contactName, setContactName] = useState(prospect?.name || '');
   const [dealName, setDealName] = useState(prospect?.deal_name || '');
@@ -109,24 +103,6 @@ export default function ProspectDetailModal({
     })();
   }, [prospect]);
 
-  const handleSaveQuote = () => {
-    (async () => {
-      try {
-        const success = await onUpdate(prospect.id, { 
-          quote_amount: parseFloat(quoteAmount) || null,
-          discount_amount: parseFloat(discountAmount) || 0,
-          quote_sent_date: quoteDate || null
-        });
-        if (success) {
-          toast({ title: 'Quote saved' });
-        }
-      } catch (err) {
-        console.error('Error saving quote:', err);
-        toast({ title: 'Failed to save quote', variant: 'destructive' });
-      }
-    })();
-  };
-
   const handleSaveDetails = () => {
     (async () => {
       const [first_name, ...rest] = (contactName || '').trim().split(' ');
@@ -146,7 +122,9 @@ export default function ProspectDetailModal({
           expected_payment_date: expectedPaymentDate || null,
           forecast_amount: forecastAmount ? parseFloat(forecastAmount) : null,
           forecast_probability: parseInt(forecastProbability) || 50,
-          notes
+          notes,
+          quote_amount: parseFloat(dealValue) || null,
+          quote_sent_date: quoteDate || null
         });
         if (success) {
           toast({ title: 'Details saved' });
@@ -171,14 +149,6 @@ export default function ProspectDetailModal({
   };
 
   const [confirmOpen, setConfirmOpen] = useState(false);
-
-  const handleScheduleFollowUp = () => {
-    if (followUpDate) {
-      onScheduleFollowUp(prospect.id, followUpType, followUpDate);
-      setFollowUpDate('');
-      setNotes('');
-    }
-  };
 
   // Documents are handled in DocumentsView; remove folder/file UI from prospect modal
 
@@ -316,88 +286,6 @@ export default function ProspectDetailModal({
                   <option key={t.tag_id} value={t.tag_id}>{t.name}</option>
                 ))}
               </select>
-            </div>
-          </div>
-          {/* Quote Management */}
-          <div className="border border-gray-200 rounded-lg p-4">
-            <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <span className="text-sm font-medium">ZAR</span>
-              Quote Management
-            </h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Quote Amount (ZAR)
-                </label>
-                <input
-                  type="number"
-                  value={quoteAmount}
-                  onChange={(e) => setQuoteAmount(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                  placeholder="0.00"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Discount Amount (ZAR)
-                </label>
-                <input
-                  type="number"
-                  value={discountAmount}
-                  onChange={(e) => setDiscountAmount(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                  placeholder="0.00"
-                />
-              </div>
-            </div>
-            <button
-              onClick={handleSaveQuote}
-              className="mt-4 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700"
-            >
-              Save Quote
-            </button>
-          </div>
-
-          {/* Follow-up Scheduling */}
-          <div className="border border-gray-200 rounded-lg p-4">
-            <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <Calendar className="w-5 h-5" />
-              Schedule Follow-up
-            </h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Follow-up Type
-                </label>
-                <select
-                  value={followUpType}
-                  onChange={(e) => setFollowUpType(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                >
-                  <option value="first_follow_up">First Follow-up</option>
-                  <option value="second_follow_up">Second Follow-up</option>
-                  <option value="mid_month_follow_up">Mid-Month Follow-up</option>
-                  <option value="month_end_follow_up">Month-End Follow-up</option>
-                  <option value="next_month_follow_up">Next Month Follow-up</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Schedule Date
-                </label>
-                <input
-                  type="date"
-                  value={followUpDate}
-                  onChange={(e) => setFollowUpDate(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                />
-              </div>
-              <button
-                onClick={handleScheduleFollowUp}
-                className="w-full px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700"
-              >
-                Schedule Follow-up
-              </button>
             </div>
           </div>
         </div>
