@@ -27,12 +27,12 @@ export default function Sidebar({ activeTab, onTabChange, isOpen = false, onClos
   return (
     <>
       {/* Desktop sidebar */}
-      <aside className="hidden md:flex w-64 bg-gradient-to-b from-slate-900 to-slate-800 text-white flex-col h-screen sticky top-0">
+      <aside className="hidden md:flex w-64 bg-gradient-to-b from-slate-900 to-slate-800 text-white flex-col h-screen fixed top-0 left-0 z-30">
         <div className="p-6 border-b border-slate-700">
           <h1 className="text-2xl font-bold text-teal-400">ImmigratePro</h1>
           <p className="text-sm text-gray-400 mt-1">Case Management</p>
         </div>
-        <nav className="flex-1 p-4">
+        <nav className="flex-1 p-4 overflow-y-auto scrollbar-hide">
           {tabs.map(tab => (
             <button
               key={tab.id}
@@ -74,7 +74,7 @@ export default function Sidebar({ activeTab, onTabChange, isOpen = false, onClos
               <X className="w-5 h-5" />
             </button>
           </div>
-          <nav className="p-4">
+          <nav className="p-4 overflow-y-auto flex-1 scrollbar-hide">
             {tabs.map(tab => (
               <button
                 key={tab.id}

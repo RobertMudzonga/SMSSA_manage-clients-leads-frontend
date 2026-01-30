@@ -119,8 +119,25 @@ export default function ProjectCard({ project, onClick, isSelected = false, onSe
         </div>
         <div className="flex flex-col items-end gap-1">
           <StatusBadge status={project.status} type="project" />
-          {formattedPayment && <div className="text-xs text-gray-600">Balance Due:</div>}
-          {formattedPayment && <div className="text-sm text-gray-700 font-medium">{formattedPayment}</div>}
+          {/* Payment Status Indicator */}
+          {project.payment_status && (
+            <>
+              <div className="text-xs text-gray-600 mt-1">
+                {project.payment_status === 'fully_paid' && <span className="text-green-600 font-medium">✓ Paid</span>}
+                {project.payment_status === 'partially_paid' && <span className="text-orange-600 font-medium">⊘ Partial</span>}
+                {project.payment_status === 'pending' && <span className="text-gray-600 font-medium">○ Pending</span>}
+              </div>
+              {project.remaining_balance && project.remaining_balance > 0 && (
+                <div className="text-xs text-gray-500">Balance: {new Intl.NumberFormat('en-ZA', { style: 'currency', currency: 'ZAR' }).format(project.remaining_balance)}</div>
+              )}
+            </>
+          )}
+          {!project.payment_status && formattedPayment && (
+            <>
+              <div className="text-xs text-gray-600">Quote:</div>
+              <div className="text-sm text-gray-700 font-medium">{formattedPayment}</div>
+            </>
+          )}
         </div>
       </div>
       
