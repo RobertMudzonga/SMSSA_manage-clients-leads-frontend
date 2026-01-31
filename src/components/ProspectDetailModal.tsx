@@ -4,12 +4,64 @@ import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { X, Calendar, Tag } from 'lucide-react';
 
+interface Prospect {
+  id: string | number;
+  name?: string;
+  first_name?: string;
+  last_name?: string;
+  deal_name?: string;
+  email?: string;
+  phone?: string;
+  lead_source?: string;
+  source?: string;
+  assigned_to?: number | string;
+  quote_sent_date?: string;
+  quote_amount?: number | string;
+  professional_fees?: number | string;
+  deposit_amount?: number | string;
+  expected_closing_date?: string;
+  expected_payment_date?: string;
+  forecast_amount?: number | string;
+  forecast_probability?: number;
+  notes?: string;
+}
+
+interface ProspectUpdate {
+  deal_name?: string;
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  phone?: string;
+  source?: string;
+  assigned_to?: number | string;
+  professional_fees?: number | string | null;
+  deposit_amount?: number | string | null;
+  expected_closing_date?: string | null;
+  expected_payment_date?: string | null;
+  forecast_amount?: number | null;
+  forecast_probability?: number;
+  notes?: string;
+  quote_amount?: number | null;
+  quote_sent_date?: string | null;
+}
+
+interface Employee {
+  id: number | string;
+  full_name: string;
+  work_email?: string;
+}
+
+interface ProspectTag {
+  tag_id: number;
+  name: string;
+}
+
 interface ProspectDetailModalProps {
-  prospect: any;
+  prospect: Prospect;
   isOpen: boolean;
   onClose: () => void;
-  onUpdate: (id: string, data: any) => Promise<boolean>;
-  onDelete?: (id: string) => void;
+  onUpdate: (id: string, data: ProspectUpdate) => Promise<boolean>;
+  onDelete?: (id: string) => Promise<void> | void;
   onMarkLost?: (id: string, reason?: string) => void;
   onSetTags?: (id: string, tagIds: number[]) => void;
 }
@@ -30,7 +82,7 @@ export default function ProspectDetailModal({
   const [phone, setPhone] = useState(prospect?.phone || '');
   const [source, setSource] = useState(prospect?.lead_source || prospect?.source || '');
   const [salesperson, setSalesperson] = useState(prospect?.assigned_to || '');
-  const [employeesList, setEmployeesList] = useState<any[]>([]);
+  const [employeesList, setEmployeesList] = useState<Employee[]>([]);
   const [employeesError, setEmployeesError] = useState<string | null>(null);
   const [quoteDate, setQuoteDate] = useState(formatForDateInput(prospect?.quote_sent_date || ''));
   const [dealValue, setDealValue] = useState(prospect?.quote_amount || '');
@@ -40,7 +92,7 @@ export default function ProspectDetailModal({
   const [expectedPaymentDate, setExpectedPaymentDate] = useState(formatForDateInput(prospect?.expected_payment_date || ''));
   const [forecastAmount, setForecastAmount] = useState(prospect?.forecast_amount || '');
   const [forecastProbability, setForecastProbability] = useState(prospect?.forecast_probability || 50);
-  const [availableTags, setAvailableTags] = useState<any[]>([]);
+  const [availableTags, setAvailableTags] = useState<ProspectTag[]>([]);
   const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
   const { toast } = useToast();
 
@@ -73,7 +125,7 @@ export default function ProspectDetailModal({
         const currentTagsResp = await fetch(`/api/prospects/${prospect.id}/tags`);
         if (currentTagsResp.ok) {
           const cur = await currentTagsResp.json();
-          setSelectedTagIds(cur.map((t: any) => t.tag_id));
+          setSelectedTagIds((cur as ProspectTag[]).map(t => t.tag_id));
         }
 
         // fetch employees for salesperson dropdown
@@ -108,7 +160,7 @@ export default function ProspectDetailModal({
       const [first_name, ...rest] = (contactName || '').trim().split(' ');
       const last_name = rest.join(' ');
       try {
-        const success = await onUpdate(prospect.id, {
+        const success = await onUpdate(String(prospect.id), {
           deal_name: dealName,
           first_name,
           last_name,
@@ -120,10 +172,10 @@ export default function ProspectDetailModal({
           deposit_amount: depositAmount || null,
           expected_closing_date: expectedClosingDate || null,
           expected_payment_date: expectedPaymentDate || null,
-          forecast_amount: forecastAmount ? parseFloat(forecastAmount) : null,
-          forecast_probability: parseInt(forecastProbability) || 50,
+          forecast_amount: forecastAmount ? Number(forecastAmount) : null,
+          forecast_probability: Number(forecastProbability) || 50,
           notes,
-          quote_amount: parseFloat(dealValue) || null,
+          quote_amount: dealValue ? Number(dealValue) : null,
           quote_sent_date: quoteDate || null
         });
         if (success) {
@@ -137,11 +189,11 @@ export default function ProspectDetailModal({
   };
 
   const handleSetTags = () => {
-    if (onSetTags) onSetTags(prospect.id, selectedTagIds);
+    if (onSetTags) onSetTags(String(prospect.id), selectedTagIds);
   };
 
   const handleMarkLost = () => {
-    if (onMarkLost) onMarkLost(prospect.id, 'Marked lost from UI');
+    if (onMarkLost) onMarkLost(String(prospect.id), 'Marked lost from UI');
   };
 
   const handleDelete = () => {
@@ -302,12 +354,7 @@ export default function ProspectDetailModal({
               <button className="px-3 py-1 rounded bg-gray-100" onClick={() => setConfirmOpen(false)}>Cancel</button>
               <button className="px-3 py-1 rounded bg-red-600 text-white" onClick={async () => {
                 try {
-                  const res = await onDelete?.(prospect.id as string);
-                  if (res && res.error) {
-                    console.error('Failed to delete prospect', res.error);
-                    toast({ title: 'Delete failed', description: res.error.message || JSON.stringify(res.error), variant: 'destructive' });
-                    return;
-                  }
+                  await onDelete?.(String(prospect.id));
                   toast({ title: 'Prospect deleted' });
                   setConfirmOpen(false);
                   onClose();
