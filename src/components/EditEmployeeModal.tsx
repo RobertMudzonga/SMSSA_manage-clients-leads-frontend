@@ -31,6 +31,15 @@ export default function EditEmployeeModal({ isOpen, employee, onClose, onSubmit 
   const { toast } = useToast();
   const { isSuperAdmin: currentUserIsSuperAdmin } = useAuth();
 
+  const jobPositions = [
+    'Immigration Support Specialist',
+    'Immigration Consultant',
+    'Senior Consultant',
+    'Sales Manager',
+    'IT',
+    'Finance'
+  ];
+
   const departments = ['Sales', 'Project', 'Legal', 'Accounts', 'Management', 'IT'];
 
   useEffect(() => {
@@ -104,11 +113,18 @@ export default function EditEmployeeModal({ isOpen, employee, onClose, onSubmit 
 
           <label className="block">
             <div className="text-sm text-gray-600 mb-1">Job position</div>
-            <Input 
-              value={jobPosition} 
-              onChange={(e) => setJobPosition(e.target.value)}
-              disabled={submitting}
-            />
+            <Select value={jobPosition} onValueChange={setJobPosition} disabled={submitting}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select job position" />
+              </SelectTrigger>
+              <SelectContent>
+                {jobPositions.map((position) => (
+                  <SelectItem key={position} value={position}>
+                    {position}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </label>
 
           <label className="block">

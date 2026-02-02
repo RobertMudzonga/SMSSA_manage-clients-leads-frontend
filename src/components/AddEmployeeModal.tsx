@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 
 interface AddEmployeeModalProps {
@@ -13,14 +14,23 @@ interface AddEmployeeModalProps {
 export default function AddEmployeeModal({ isOpen, onClose, onSubmit }: AddEmployeeModalProps) {
   const [fullName, setFullName] = useState('');
   const [workEmail, setWorkEmail] = useState('');
-  const [jobPosition, setJobPosition] = useState('Staff');
+  const [jobPosition, setJobPosition] = useState('Immigration Support Specialist');
   const [department, setDepartment] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const { toast } = useToast();
 
+  const jobPositions = [
+    'Immigration Support Specialist',
+    'Immigration Consultant',
+    'Senior Consultant',
+    'Sales Manager',
+    'IT',
+    'Finance'
+  ];
+
   useEffect(() => {
     if (!isOpen) {
-      setFullName(''); setWorkEmail(''); setJobPosition('Staff'); setDepartment('');
+      setFullName(''); setWorkEmail(''); setJobPosition('Immigration Support Specialist'); setDepartment('');
     }
   }, [isOpen]);
 
@@ -65,7 +75,18 @@ export default function AddEmployeeModal({ isOpen, onClose, onSubmit }: AddEmplo
           </label>
           <label className="block">
             <div className="text-sm text-gray-600 mb-1">Job position</div>
-            <Input value={jobPosition} onChange={(e) => setJobPosition(e.target.value)} />
+            <Select value={jobPosition} onValueChange={setJobPosition}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select job position" />
+              </SelectTrigger>
+              <SelectContent>
+                {jobPositions.map((position) => (
+                  <SelectItem key={position} value={position}>
+                    {position}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </label>
           <label className="block">
             <div className="text-sm text-gray-600 mb-1">Department</div>

@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { TrendingUp, Target, Award, Calendar } from 'lucide-react';
+import { EmployeeKPITab } from './EmployeeKPITab';
 
 interface EmployeeDetailModalProps {
   employee: any;
@@ -92,9 +93,10 @@ export function EmployeeDetailModal({ employee, metrics, goals, reviews, open, o
         </Dialog>
         
         <Tabs defaultValue="overview" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="goals">Goals</TabsTrigger>
+            <TabsTrigger value="kpi">KPI Tracking</TabsTrigger>
             <TabsTrigger value="reviews">Reviews</TabsTrigger>
             <TabsTrigger value="activity">Activity</TabsTrigger>
           </TabsList>
@@ -153,6 +155,14 @@ export function EmployeeDetailModal({ employee, metrics, goals, reviews, open, o
                 </div>
               </Card>
             ))}
+          </TabsContent>
+          
+          <TabsContent value="kpi">
+            <EmployeeKPITab 
+              employeeId={employee.id} 
+              employeeName={employee.full_name}
+              jobPosition={employee.job_position}
+            />
           </TabsContent>
           
           <TabsContent value="reviews" className="space-y-4">
