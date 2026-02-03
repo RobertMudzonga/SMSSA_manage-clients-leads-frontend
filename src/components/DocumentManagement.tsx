@@ -36,7 +36,7 @@ import DocumentProfilePanel from './DocumentProfilePanel';
 import VersionHistoryPanel from './VersionHistoryPanel';
 import CheckInOutModal from './CheckInOutModal';
 import AccessSharingModal from './AccessSharingModal';
-import UploadDocumentModal from './UploadDocumentModal';
+import UploadDocumentForm from './UploadDocumentForm';
 
 interface Project {
   project_id: number;
@@ -185,31 +185,32 @@ export default function DocumentManagement() {
     }
   };
 
-  const handleUpload = async (formData: FormData) => {
-    setUploading(true);
+  const handleUpload = async (document: any) => {
     try {
-      const response = await fetch(`${API_BASE}/api/documents/upload`, {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) throw new Error('Upload failed');
-      
       toast({ title: 'Document uploaded successfully' });
       setShowUploadModal(false);
       
+      // Refresh documents list
       if (selectedProject) {
         if (selectedFolder) {
-          await fetchFolderDocuments(selectedFolder.folder_id);
+          try {
+            await fetchFolderDocuments(selectedFolder.folder_id);
+          } catch (err) {
+            console.error('Error refreshing folder documents:', err);
+            toast({ title: 'Error refreshing documents', variant: 'destructive' });
+          }
         } else {
-          await fetchProjectDocuments(selectedProject.project_id);
+          try {
+            await fetchProjectDocuments(selectedProject.project_id);
+          } catch (err) {
+            console.error('Error refreshing project documents:', err);
+            toast({ title: 'Error refreshing documents', variant: 'destructive' });
+          }
         }
       }
     } catch (error) {
       console.error('Upload error:', error);
       toast({ title: 'Upload failed', variant: 'destructive' });
-    } finally {
-      setUploading(false);
     }
   };
 
@@ -399,7 +400,7 @@ export default function DocumentManagement() {
               <DialogHeader>
                 <DialogTitle>Upload Document</DialogTitle>
               </DialogHeader>
-              <UploadDocumentModal
+              <UploadDocumentForm
                 projectId={selectedProject?.project_id}
                 folderId={selectedFolder?.folder_id}
                 onUpload={handleUpload}
