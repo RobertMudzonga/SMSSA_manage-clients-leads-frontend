@@ -8,7 +8,7 @@ import Sidebar from './Sidebar';
 import DashboardView from './DashboardView';
 import ProspectsView from './ProspectsView';
 import ProjectsView from './ProjectsView';
-import DocumentsView from './DocumentsView';
+import DocumentManagement from './DocumentManagement';
 import ClientPortalView from './ClientPortalView';
 import { EmployeesView } from './EmployeesView';
 import DocumentChecklistView from './DocumentChecklistView';
@@ -719,7 +719,7 @@ export default function AppLayout() {
             onDeleteEmployee={handleDeleteEmployee}
           />
         )}
-        {activeTab === 'documents' && <DocumentsView documents={documents} onUploadDocument={handleUploadDocument} onDownload={() => {}} onSign={() => {}} />}
+        {activeTab === 'documents' && <DocumentManagement />}
         {activeTab === 'templates' && <TemplateLibraryView />}
         {activeTab === 'analytics' && <AnalyticsView />}
         {activeTab === 'client-portal' && <ClientPortalView clientData={clientData} />}
