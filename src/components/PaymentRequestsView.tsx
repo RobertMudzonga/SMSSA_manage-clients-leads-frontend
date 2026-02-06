@@ -45,14 +45,23 @@ export default function PaymentRequestsView({
 }: PaymentRequestsViewProps) {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [filterRequester, setFilterRequester] = useState<string>('all');
   const [rejectingId, setRejectingId] = useState<number | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
   const { toast } = useToast();
   const { user, isAdmin } = useAuth();
 
+  // Get unique requesters for the filter dropdown
+  const uniqueRequesters = Array.from(
+    new Map(
+      paymentRequests.map(pr => [pr.requester_name, pr.requested_by])
+    ).entries()
+  ).map(([name, id]) => ({ name, id })).sort((a, b) => a.name.localeCompare(b.name));
+
   const filteredRequests = paymentRequests.filter(pr => {
-    if (filterStatus === 'all') return true;
-    return pr.status === filterStatus;
+    const statusMatch = filterStatus === 'all' || pr.status === filterStatus;
+    const requesterMatch = filterRequester === 'all' || pr.requester_name === filterRequester;
+    return statusMatch && requesterMatch;
   });
 
   const getStatusBadge = (status: string) => {
@@ -89,6 +98,18 @@ export default function PaymentRequestsView({
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-gray-900">Payment Requests</h2>
         <div className="flex items-center gap-3">
+          <select
+            value={filterRequester}
+            onChange={(e) => setFilterRequester(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-lg"
+          >
+            <option value="all">All Requesters</option>
+            {uniqueRequesters.map(requester => (
+              <option key={requester.id} value={requester.name}>
+                {requester.name}
+              </option>
+            ))}
+          </select>
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
