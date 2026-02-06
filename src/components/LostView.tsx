@@ -33,6 +33,8 @@ export default function LostView() {
   const [lostLeads, setLostLeads] = useState<LostLead[]>([]);
   const [lostProspects, setLostProspects] = useState<LostProspect[]>([]);
   const [loading, setLoading] = useState(false);
+  const [leadsError, setLeadsError] = useState<string | null>(null);
+  const [prospectsError, setProspectsError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('leads');
   const { toast } = useToast();
@@ -44,17 +46,21 @@ export default function LostView() {
 
   const fetchLostLeads = async () => {
     setLoading(true);
+    setLeadsError(null);
     try {
       const response = await fetch(`${API_BASE}/leads/lost/list`);
       if (response.ok) {
         const data = await response.json();
         setLostLeads(Array.isArray(data) ? data : []);
       } else {
-        console.error('Failed to fetch lost leads');
+        const errorText = await response.text().catch(() => 'Failed to fetch lost leads');
+        console.error('Failed to fetch lost leads:', errorText);
+        setLeadsError(errorText || 'Failed to fetch lost leads');
         setLostLeads([]);
       }
     } catch (err) {
       console.error('Error fetching lost leads:', err);
+      setLeadsError(String(err));
       toast({ title: 'Failed to fetch lost leads', variant: 'destructive' });
       setLostLeads([]);
     } finally {
@@ -64,17 +70,21 @@ export default function LostView() {
 
   const fetchLostProspects = async () => {
     setLoading(true);
+    setProspectsError(null);
     try {
       const response = await fetch(`${API_BASE}/prospects/lost/list`);
       if (response.ok) {
         const data = await response.json();
         setLostProspects(Array.isArray(data) ? data : []);
       } else {
-        console.error('Failed to fetch lost prospects');
+        const errorText = await response.text().catch(() => 'Failed to fetch lost prospects');
+        console.error('Failed to fetch lost prospects:', errorText);
+        setProspectsError(errorText || 'Failed to fetch lost prospects');
         setLostProspects([]);
       }
     } catch (err) {
       console.error('Error fetching lost prospects:', err);
+      setProspectsError(String(err));
       toast({ title: 'Failed to fetch lost prospects', variant: 'destructive' });
       setLostProspects([]);
     } finally {
@@ -163,9 +173,18 @@ export default function LostView() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Lost Records Recovery</h1>
-          <p className="text-gray-600">View and recover lost leads and prospects that were marked as lost.</p>
+        <div className="mb-8 flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Lost Records Recovery</h1>
+            <p className="text-gray-600">View and recover lost leads and prospects that were marked as lost.</p>
+          </div>
+          <button
+            onClick={() => { fetchLostLeads(); fetchLostProspects(); }}
+            className="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-700 flex items-center gap-2"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Refresh
+          </button>
         </div>
 
         {/* Search Bar */}
@@ -197,6 +216,11 @@ export default function LostView() {
               <div className="text-center py-12">
                 <p className="text-gray-500">Loading lost leads...</p>
               </div>
+            ) : leadsError ? (
+              <Card className="p-6 text-center text-red-700 bg-red-50 border-red-200">
+                <p className="font-medium">Unable to load lost leads</p>
+                <p className="text-sm mt-2 break-words">{leadsError}</p>
+              </Card>
             ) : filteredLeads.length === 0 ? (
               <Card className="p-8 text-center">
                 <p className="text-gray-500">No lost leads found</p>
@@ -264,6 +288,11 @@ export default function LostView() {
               <div className="text-center py-12">
                 <p className="text-gray-500">Loading lost prospects...</p>
               </div>
+            ) : prospectsError ? (
+              <Card className="p-6 text-center text-red-700 bg-red-50 border-red-200">
+                <p className="font-medium">Unable to load lost prospects</p>
+                <p className="text-sm mt-2 break-words">{prospectsError}</p>
+              </Card>
             ) : filteredProspects.length === 0 ? (
               <Card className="p-8 text-center">
                 <p className="text-gray-500">No lost prospects found</p>
