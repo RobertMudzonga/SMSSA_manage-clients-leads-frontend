@@ -24,26 +24,34 @@ export default function UploadDocumentForm({
 }: UploadDocumentFormProps) {
   const { toast } = useToast();
   const { user } = useAuth();
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
   const [fileName, setFileName] = useState('');
   const [description, setDescription] = useState('');
   const [uploading, setUploading] = useState(false);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const selectedFile = e.target.files[0];
-      setFile(selectedFile);
-      setFileName(selectedFile.name);
+    const selectedFiles = e.target.files ? Array.from(e.target.files) : [];
+    if (selectedFiles.length === 0) {
+      setFiles([]);
+      setFileName('');
+      return;
+    }
+
+    setFiles(selectedFiles);
+    if (selectedFiles.length === 1) {
+      setFileName(selectedFiles[0].name);
+    } else {
+      setFileName('');
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!file) {
+    if (files.length === 0) {
       toast({
-        title: 'No file selected',
-        description: 'Please select a file to upload',
+        title: 'No files selected',
+        description: 'Please select one or more files to upload',
         variant: 'destructive'
       });
       return;
@@ -61,43 +69,84 @@ export default function UploadDocumentForm({
     setUploading(true);
 
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('project_id', String(projectId));
-      if (folderId) {
-        formData.append('folder_id', String(folderId));
-      }
-      if (fileName) {
-        formData.append('document_name', fileName);
-      }
-      if (description) {
-        formData.append('description', description);
-      }
-
       const headers: Record<string, string> = {};
       if (user?.email) {
         headers['x-user-email'] = user.email;
       }
 
-      const response = await fetch(`${API_BASE}/api/documents/upload`, {
-        method: 'POST',
-        body: formData,
-        headers
-      });
+      if (files.length === 1) {
+        const formData = new FormData();
+        formData.append('file', files[0]);
+        formData.append('project_id', String(projectId));
+        if (folderId) {
+          formData.append('folder_id', String(folderId));
+        }
+        if (fileName) {
+          formData.append('document_name', fileName);
+        }
+        if (description) {
+          formData.append('description', description);
+        }
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `Upload failed with status ${response.status}`);
+        const response = await fetch(`${API_BASE}/api/documents/upload`, {
+          method: 'POST',
+          body: formData,
+          headers
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || `Upload failed with status ${response.status}`);
+        }
+
+        const data = await response.json();
+        toast({
+          title: 'Document uploaded successfully',
+          description: `${fileName || files[0].name} has been uploaded`
+        });
+
+        onUpload(data.document || data);
+      } else {
+        const formData = new FormData();
+        files.forEach((f) => formData.append('files', f));
+        formData.append('project_id', String(projectId));
+        if (folderId) {
+          formData.append('folder_id', String(folderId));
+        }
+        if (description) {
+          formData.append('description', description);
+        }
+
+        const response = await fetch(`${API_BASE}/api/documents/bulk-upload`, {
+          method: 'POST',
+          body: formData,
+          headers
+        });
+
+        const data = await response.json().catch(() => null);
+        if (!response.ok && response.status !== 207) {
+          throw new Error(data?.error || `Upload failed with status ${response.status}`);
+        }
+
+        const uploadedDocs = data?.uploaded || [];
+        uploadedDocs.forEach((doc: any) => onUpload(doc));
+
+        const failedCount = data?.failed?.length || 0;
+        if (failedCount > 0) {
+          toast({
+            title: 'Bulk upload completed with errors',
+            description: `${uploadedDocs.length} uploaded, ${failedCount} failed`,
+            variant: 'destructive'
+          });
+        } else {
+          toast({
+            title: 'Bulk upload completed',
+            description: `${uploadedDocs.length} documents uploaded successfully`
+          });
+        }
       }
 
-      const data = await response.json();
-      toast({
-        title: 'Document uploaded successfully',
-        description: `${fileName} has been uploaded`
-      });
-
-      onUpload(data.document || data);
-      setFile(null);
+      setFiles([]);
       setFileName('');
       setDescription('');
       onClose();
@@ -125,12 +174,21 @@ export default function UploadDocumentForm({
           onChange={handleFileChange}
           disabled={uploading}
           accept="*/*"
+          multiple
           className="cursor-pointer"
         />
-        {file && (
-          <p className="text-xs text-gray-500 mt-1">
-            Selected: {file.name} ({(file.size / 1024).toFixed(2)} KB)
-          </p>
+        {files.length > 0 && (
+          <div className="text-xs text-gray-500 mt-2 space-y-1">
+            <p>{files.length} file{files.length > 1 ? 's' : ''} selected</p>
+            {files.slice(0, 4).map((f) => (
+              <p key={f.name} className="truncate">
+                {f.name} ({(f.size / 1024).toFixed(2)} KB)
+              </p>
+            ))}
+            {files.length > 4 && (
+              <p className="text-gray-400">and {files.length - 4} more...</p>
+            )}
+          </div>
         )}
       </div>
 
@@ -143,8 +201,8 @@ export default function UploadDocumentForm({
           type="text"
           value={fileName}
           onChange={(e) => setFileName(e.target.value)}
-          placeholder="Enter document name"
-          disabled={uploading}
+          placeholder={files.length > 1 ? 'Document name applies to single uploads only' : 'Enter document name'}
+          disabled={uploading || files.length > 1}
         />
       </div>
 
@@ -174,7 +232,7 @@ export default function UploadDocumentForm({
         </Button>
         <Button
           type="submit"
-          disabled={uploading || !file}
+          disabled={uploading || files.length === 0}
           className="gap-2"
         >
           {uploading ? (
@@ -183,7 +241,7 @@ export default function UploadDocumentForm({
               Uploading...
             </>
           ) : (
-            'Upload Document'
+            files.length > 1 ? 'Upload Documents' : 'Upload Document'
           )}
         </Button>
       </div>

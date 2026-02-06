@@ -19,7 +19,7 @@ export default function UploadDocumentModal({ isOpen, onClose, onSubmit, project
     signature_required: false,
     expiry_date: ''
   });
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
   const { user } = useAuth();
 
@@ -41,46 +41,82 @@ export default function UploadDocumentModal({ isOpen, onClose, onSubmit, project
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!file) {
-      toast({ title: 'No file selected', description: 'Please select a file to upload', variant: 'destructive' });
+    if (files.length === 0) {
+      toast({ title: 'No files selected', description: 'Please select one or more files to upload', variant: 'destructive' });
       return;
     }
 
     setUploading(true);
     try {
-      const fd = new FormData();
-      fd.append('file', file as File);
-      
-      // Support both project ID and project name
-      if (projectName) {
-        fd.append('project_name', projectName);
-      } else if (projectId) {
-        fd.append('project_id', String(projectId));
-      }
-      
-      fd.append('document_name', formData.document_name);
-      fd.append('document_type', formData.document_type);
-      fd.append('signature_required', String(formData.signature_required));
-      if (formData.expiry_date) {
-        fd.append('expiry_date', formData.expiry_date);
-      }
-
       const headers: Record<string,string> = {};
       if (user && user.email) headers['x-user-email'] = user.email;
 
-      const res = await fetch('/api/documents/upload', { method: 'POST', body: fd, headers });
-      const ct = res.headers.get('content-type') || '';
-      let json: any = null;
-      if (ct.includes('application/json')) json = await res.json(); else { const t = await res.text(); try { json = JSON.parse(t); } catch { json = { error: t }; } }
+      if (files.length === 1) {
+        const fd = new FormData();
+        fd.append('file', files[0]);
+        
+        // Support both project ID and project name
+        if (projectName) {
+          fd.append('project_name', projectName);
+        } else if (projectId) {
+          fd.append('project_id', String(projectId));
+        }
+        
+        fd.append('document_name', formData.document_name);
+        fd.append('document_type', formData.document_type);
+        fd.append('signature_required', String(formData.signature_required));
+        if (formData.expiry_date) {
+          fd.append('expiry_date', formData.expiry_date);
+        }
 
-      if (!res.ok) {
-        console.error('Upload failed', json);
-        toast({ title: 'Upload failed', description: json?.error || 'Server error', variant: 'destructive' });
+        const res = await fetch('/api/documents/upload', { method: 'POST', body: fd, headers });
+        const ct = res.headers.get('content-type') || '';
+        let json: any = null;
+        if (ct.includes('application/json')) json = await res.json(); else { const t = await res.text(); try { json = JSON.parse(t); } catch { json = { error: t }; } }
+
+        if (!res.ok) {
+          console.error('Upload failed', json);
+          toast({ title: 'Upload failed', description: json?.error || 'Server error', variant: 'destructive' });
+        } else {
+          // backend returns created document
+          onSubmit(json.document || json);
+          setFormData({ document_name: '', document_type: 'Passport', signature_required: false, expiry_date: '' });
+          setFiles([]);
+        }
       } else {
-        // backend returns created document
-        onSubmit(json.document || json);
-        setFormData({ document_name: '', document_type: 'Passport', signature_required: false, expiry_date: '' });
-        setFile(null);
+        const fd = new FormData();
+        files.forEach((f) => fd.append('files', f));
+        
+        if (projectName) {
+          fd.append('project_name', projectName);
+        } else if (projectId) {
+          fd.append('project_id', String(projectId));
+        }
+        
+        fd.append('document_type', formData.document_type);
+        fd.append('signature_required', String(formData.signature_required));
+        if (formData.expiry_date) {
+          fd.append('expiry_date', formData.expiry_date);
+        }
+
+        const res = await fetch('/api/documents/bulk-upload', { method: 'POST', body: fd, headers });
+        const ct = res.headers.get('content-type') || '';
+        let json: any = null;
+        if (ct.includes('application/json')) json = await res.json(); else { const t = await res.text(); try { json = JSON.parse(t); } catch { json = { error: t }; } }
+
+        if (!res.ok && res.status !== 207) {
+          console.error('Bulk upload failed', json);
+          toast({ title: 'Upload failed', description: json?.error || 'Server error', variant: 'destructive' });
+        } else {
+          const uploadedDocs = json?.uploaded || [];
+          uploadedDocs.forEach((doc: any) => onSubmit(doc));
+          const failedCount = json?.failed?.length || 0;
+          if (failedCount > 0) {
+            toast({ title: 'Bulk upload completed with errors', description: `${uploadedDocs.length} uploaded, ${failedCount} failed`, variant: 'destructive' });
+          }
+          setFormData({ document_name: '', document_type: 'Passport', signature_required: false, expiry_date: '' });
+          setFiles([]);
+        }
       }
     } catch (error) {
       console.error('Upload error:', error);
@@ -97,11 +133,12 @@ export default function UploadDocumentModal({ isOpen, onClose, onSubmit, project
         <form onSubmit={handleSubmit} className="space-y-4">
           <input
             type="text"
-            placeholder="Document Name"
+            placeholder={files.length > 1 ? 'Document name applies to single uploads only' : 'Document Name'}
             value={formData.document_name}
             onChange={(e) => setFormData({...formData, document_name: e.target.value})}
             className="w-full px-3 py-2 border rounded-lg"
-            required
+            required={files.length <= 1}
+            disabled={files.length > 1}
           />
           <select
             value={formData.document_type}
@@ -131,11 +168,22 @@ export default function UploadDocumentModal({ isOpen, onClose, onSubmit, project
             <input
               type="file"
               accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-              onChange={(e) => setFile(e.target.files?.[0] || null)}
+              multiple
+              onChange={(e) => setFiles(e.target.files ? Array.from(e.target.files) : [])}
               className="w-full"
               required
             />
-            {file && <p className="text-sm text-gray-600 mt-2">Selected: {file.name}</p>}
+            {files.length > 0 && (
+              <div className="text-sm text-gray-600 mt-2 space-y-1">
+                <p>{files.length} file{files.length > 1 ? 's' : ''} selected</p>
+                {files.slice(0, 3).map((f) => (
+                  <p key={f.name} className="truncate">{f.name}</p>
+                ))}
+                {files.length > 3 && (
+                  <p className="text-gray-400">and {files.length - 3} more...</p>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
