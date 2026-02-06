@@ -17,6 +17,7 @@ import DatabaseHealthDashboard from './DatabaseHealthDashboard';
 import { AnalyticsView } from './AnalyticsView';
 import ProjectView from './ProjectView';
 import LeadsView from './LeadsView';
+import LostView from './LostView';
 import PaymentRequestsView from './PaymentRequestsView';
 import LeaveRequestsView from './LeaveRequestsView';
 import ForecastView from './ForecastView';
@@ -725,6 +726,7 @@ export default function AppLayout() {
         {activeTab === 'client-portal' && <ClientPortalView clientData={clientData} />}
         {activeTab === 'database-health' && <DatabaseHealthDashboard />}
         {activeTab === 'leads' && <LeadsView />}
+        {activeTab === 'lost' && <LostView />}
         {activeTab === 'leave-requests' && <LeaveRequestsView />}
         {activeTab === 'payment-requests' && (
           <PaymentRequestsView
