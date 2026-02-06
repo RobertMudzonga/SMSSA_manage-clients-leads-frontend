@@ -249,14 +249,20 @@ export default function ColdLeadsKanbanApp() {
     // --- API & State Update Logic ---
 
     const convertLeadToOpportunity = useCallback(async (leadId) => {
-        const targetOpportunityStageId = 1; // Stage ID for "Opportunity" in the Prospect pipeline
+        const targetOpportunityStageId = 104; // Stage ID for "Convert to Opportunity" in the Cold Leads pipeline
         
-        // Optimistic UI Update: Remove from Cold Leads board immediately
+        // Optimistic UI Update: Mark lead as converted by updating its stage
         const originalLeads = leads;
-        setLeads(prevLeads => prevLeads.filter(l => l.lead_id !== leadId));
+        setLeads(prevLeads =>
+            prevLeads.map(l => 
+                l.lead_id === leadId 
+                    ? { ...l, current_stage_id: targetOpportunityStageId }
+                    : l
+            )
+        );
 
         try {
-            // Call the same PATCH endpoint used in the Prospect board, but with targetStageId = 1
+            // Call the PATCH endpoint to update the lead's stage
             const response = await fetch(`${API_BASE}/leads/${leadId}/stage`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
@@ -270,11 +276,11 @@ export default function ColdLeadsKanbanApp() {
                 throw new Error(errorData.error || `Failed to convert lead: ${response.status}`);
             }
 
-            showToast(`Lead ID ${leadId} converted to Opportunity and moved to Prospect pipeline!`, 'success');
+            showToast(`Lead ID ${leadId} marked as "Convert to Opportunity"!`, 'success');
 
         } catch (err) {
             console.error("Conversion Error:", err);
-            setError(`Could not convert lead: ${err.message}. Lead returned to Cold Leads board.`);
+            setError(`Could not convert lead: ${err.message}. Lead returned to previous state.`);
             // Revert state on failure
             setLeads(originalLeads); 
             showToast('Conversion failed. Lead returned.', 'error');
