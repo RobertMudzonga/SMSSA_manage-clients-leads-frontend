@@ -21,6 +21,7 @@ import LostView from './LostView';
 import PaymentRequestsView from './PaymentRequestsView';
 import LeaveRequestsView from './LeaveRequestsView';
 import ForecastView from './ForecastView';
+import SubmissionsView from './SubmissionsView';
 import { API_BASE } from '../lib/api';
 
 export default function AppLayout() {
@@ -36,6 +37,7 @@ export default function AppLayout() {
   const [reviews, setReviews] = useState<any[]>([]);
   const [selectedProjectForChecklist, setSelectedProjectForChecklist] = useState<string | null>(null);
   const [paymentRequests, setPaymentRequests] = useState<any[]>([]);
+  const [submissions, setSubmissions] = useState<any[]>([]);
 
   useEffect(() => {
     loadData();
@@ -91,6 +93,15 @@ export default function AppLayout() {
       console.error('Error fetching payment requests:', err);
       paymentRequestsData = [];
     }
+    // Fetch submissions
+    let submissionsData = [];
+    try {
+      const r = await fetch(`${API_BASE}/submissions`);
+      submissionsData = r.ok ? await r.json() : [];
+    } catch (err) {
+      console.error('Error fetching submissions:', err);
+      submissionsData = [];
+    }
     // Derive project metrics per employee (in-progress/completed)
     const projectStatsByManager: Record<string, { inProgress: number; completed: number }> = {};
     projectsData.forEach((p: any) => {
@@ -119,6 +130,7 @@ export default function AppLayout() {
     setGoals([]);
     setReviews([]);
     setPaymentRequests(paymentRequestsData || []);
+    setSubmissions(submissionsData || []);
   };
 
   const handleAddProspect = async (data: any) => {
@@ -588,6 +600,64 @@ export default function AppLayout() {
     }
   };
 
+  const handleAddSubmission = async (data: any) => {
+    try {
+      const response = await fetch(`${API_BASE}/submissions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (response.ok) {
+        await loadData();
+        toast({ title: 'Submission created successfully' });
+        return;
+      }
+      const errorData = await response.json().catch(() => null);
+      throw new Error(errorData?.error || 'Failed to create submission');
+    } catch (error: any) {
+      console.error('Error creating submission:', error);
+      toast({ title: 'Failed to create submission', description: error?.message, variant: 'destructive' });
+    }
+  };
+
+  const handleUpdateSubmission = async (id: number, data: any) => {
+    try {
+      const response = await fetch(`${API_BASE}/submissions/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (response.ok) {
+        await loadData();
+        toast({ title: 'Submission updated successfully' });
+        return;
+      }
+      const errorData = await response.json().catch(() => null);
+      throw new Error(errorData?.error || 'Failed to update submission');
+    } catch (error: any) {
+      console.error('Error updating submission:', error);
+      toast({ title: 'Failed to update submission', description: error?.message, variant: 'destructive' });
+    }
+  };
+
+  const handleDeleteSubmission = async (id: number) => {
+    try {
+      const response = await fetch(`${API_BASE}/submissions/${id}`, {
+        method: 'DELETE',
+      });
+      if (response.ok) {
+        await loadData();
+        toast({ title: 'Submission deleted successfully' });
+        return;
+      }
+      const errorData = await response.json().catch(() => null);
+      toast({ title: 'Failed to delete', description: errorData?.error, variant: 'destructive' });
+    } catch (error: any) {
+      console.error('Error deleting submission:', error);
+      toast({ title: 'Failed to delete', variant: 'destructive' });
+    }
+  };
+
   const projectsRevenue = projects.reduce((sum, p) => {
     const amount = p.payment_amount ? parseFloat(p.payment_amount) : 0;
     return sum + (isNaN(amount) ? 0 : amount);
@@ -736,6 +806,16 @@ export default function AppLayout() {
             onReject={handleRejectPaymentRequest}
             onMarkPaid={handleMarkPaymentPaid}
             onDelete={handleDeletePaymentRequest}
+          />
+        )}
+        {activeTab === 'submissions' && (
+          <SubmissionsView
+            submissions={submissions}
+            projects={projects}
+            onAddSubmission={handleAddSubmission}
+            onUpdateSubmission={handleUpdateSubmission}
+            onDeleteSubmission={handleDeleteSubmission}
+            onRefresh={loadData}
           />
         )}
           </div>

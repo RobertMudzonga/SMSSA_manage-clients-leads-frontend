@@ -14,6 +14,7 @@ import EmployeesKanbanView from './components/EmployeesKanbanView';
 import OrgChartView from './components/OrgChartView';
 import AppraisalsListView from './components/AppraisalsListView';
 import DocumentManagement from './components/DocumentManagement';
+import Submissions from './pages/Submissions';
 
 
 const queryClient = new QueryClient();
@@ -30,6 +31,7 @@ const App = () => (
             <Route path="/client-portal" element={<ClientPortal />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/documents" element={<DocumentManagement />} />
+            <Route path="/submissions" element={<Submissions />} />
             <Route path="/employees/table" element={<EmployeesTableView />} />
             <Route path="/employees/kanban" element={<EmployeesKanbanView />} />
             <Route path="/employees/org" element={<OrgChartView />} />
