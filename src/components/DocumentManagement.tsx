@@ -33,6 +33,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import DocumentFolderTree from './DocumentFolderTree';
 import DocumentBrowser from './DocumentBrowser';
 import DocumentProfilePanel from './DocumentProfilePanel';
+import DocumentPreviewModal from './DocumentPreviewModal';
 import VersionHistoryPanel from './VersionHistoryPanel';
 import CheckInOutModal from './CheckInOutModal';
 import AccessSharingModal from './AccessSharingModal';
@@ -83,6 +84,7 @@ export default function DocumentManagement() {
   const [statusFilter, setStatusFilter] = useState('all');
   
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
+  const [previewDocument, setPreviewDocument] = useState<Document | null>(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showProfilePanel, setShowProfilePanel] = useState(false);
   const [showVersionHistory, setShowVersionHistory] = useState(false);
@@ -472,6 +474,16 @@ export default function DocumentManagement() {
                       <h3 className="font-semibold text-gray-900 truncate">{doc.name}</h3>
                       <p className="text-xs text-gray-500 mt-1">{doc.unique_doc_id}</p>
                     </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPreviewDocument(doc);
+                      }}
+                      className="p-1 hover:bg-blue-100 rounded transition-colors"
+                      title="Preview document"
+                    >
+                      <Eye className="w-4 h-4 text-blue-500" />
+                    </button>
                   </div>
                   
                   <div className="mb-3">
@@ -594,6 +606,16 @@ export default function DocumentManagement() {
             />
           </DialogContent>
         </Dialog>
+      )}
+
+      {previewDocument && (
+        <DocumentPreviewModal
+          isOpen={!!previewDocument}
+          documentId={previewDocument.document_id}
+          documentName={previewDocument.name}
+          mimeType={previewDocument.document_type}
+          onClose={() => setPreviewDocument(null)}
+        />
       )}
     </div>
   );

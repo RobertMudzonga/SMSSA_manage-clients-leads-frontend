@@ -25,12 +25,36 @@ export default function DocumentPreviewModal({
     return `${base}/api/documents/${id}/download`;
   };
 
-  const canPreview = () => {
-    if (!mimeType) return false;
-    return (
-      mimeType.startsWith('image/') ||
-      mimeType === 'application/pdf'
-    );
+  // Detect file type from filename if mimeType is not available
+  const getFileExtension = () => {
+    const parts = documentName.split('.');
+    return parts.length > 1 ? parts[parts.length - 1].toLowerCase() : '';
+  };
+
+  // Determine if we can preview and what type of preview
+  const getPreviewType = () => {
+    // Check by MIME type first
+    if (mimeType) {
+      if (mimeType.startsWith('image/')) return 'image';
+      if (mimeType === 'application/pdf') return 'pdf';
+      if (mimeType.includes('word') || mimeType.includes('document')) return 'word';
+      if (mimeType.includes('sheet') || mimeType.includes('excel')) return 'excel';
+      if (mimeType.includes('text') || mimeType === 'text/plain') return 'text';
+    }
+
+    // Fall back to file extension
+    const ext = getFileExtension();
+    const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp'];
+    const docExts = ['doc', 'docx', 'txt', 'odt'];
+    const sheetExts = ['xlsx', 'xls', 'csv', 'ods'];
+    const pdfExts = ['pdf'];
+
+    if (imageExts.includes(ext)) return 'image';
+    if (pdfExts.includes(ext)) return 'pdf';
+    if (docExts.includes(ext)) return 'word';
+    if (sheetExts.includes(ext)) return 'excel';
+
+    return null;
   };
 
   useEffect(() => {
@@ -43,6 +67,8 @@ export default function DocumentPreviewModal({
   if (!isOpen) return null;
 
   const previewUrl = buildUrl(documentId);
+  const previewType = getPreviewType();
+  const ext = getFileExtension();
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -50,7 +76,7 @@ export default function DocumentPreviewModal({
         <div className="sticky top-0 bg-white p-4 border-b flex items-center justify-between">
           <div>
             <h3 className="font-semibold text-lg">{documentName}</h3>
-            <p className="text-xs text-gray-500">{mimeType || 'Unknown type'}</p>
+            <p className="text-xs text-gray-500">{mimeType || `File type: .${ext}`}</p>
           </div>
           <div className="flex items-center gap-2">
             <a
@@ -71,10 +97,13 @@ export default function DocumentPreviewModal({
         </div>
 
         <div className="p-6">
-          {!canPreview() ? (
+          {!previewType ? (
             <div className="text-center py-12">
               <p className="text-gray-600 mb-4">
-                Preview not available for this file type ({mimeType || 'unknown'})
+                Preview not available for .{ext} files
+              </p>
+              <p className="text-gray-500 text-sm mb-6">
+                This file type cannot be previewed in the browser. Click the button below to download and open it with your default application.
               </p>
               <a
                 href={previewUrl}
@@ -84,7 +113,7 @@ export default function DocumentPreviewModal({
                 Download File
               </a>
             </div>
-          ) : mimeType?.startsWith('image/') ? (
+          ) : previewType === 'image' ? (
             <div className="text-center">
               <img
                 src={previewUrl}
@@ -98,14 +127,76 @@ export default function DocumentPreviewModal({
               />
               {error && <p className="text-red-600 mt-4">{error}</p>}
             </div>
-          ) : mimeType === 'application/pdf' ? (
+          ) : previewType === 'pdf' ? (
             <div className="bg-gray-100">
-              <iframe
-                src={`${previewUrl}#toolbar=1`}
+              <object
+                data={previewUrl}
+                type="application/pdf"
                 className="w-full h-[600px] border-0"
                 onLoad={() => setLoading(false)}
-              />
+              >
+                <div className="bg-white p-6 text-center">
+                  <p className="text-gray-600 mb-4">
+                    PDF preview is loading...
+                  </p>
+                  <p className="text-gray-500 text-sm mb-6">
+                    If the preview doesn't load, click below to download the PDF.
+                  </p>
+                  <a
+                    href={previewUrl}
+                    download
+                    className="inline-block px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700"
+                  >
+                    Download PDF
+                  </a>
+                </div>
+              </object>
               {error && <p className="text-red-600 p-4">{error}</p>}
+            </div>
+          ) : previewType === 'word' ? (
+            <div className="bg-gray-100">
+              <div className="bg-white p-4 text-center">
+                <p className="text-gray-600 mb-4">
+                  Preview for Word documents is limited. Download to view the full formatting.
+                </p>
+                <a
+                  href={previewUrl}
+                  download
+                  className="inline-block px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700"
+                >
+                  Download {'.docx' === ('.' + ext) ? 'Word' : 'Document'}
+                </a>
+              </div>
+              <iframe
+                src={`https://docs.google.com/gviz/viewer?url=${encodeURIComponent(previewUrl)}&embedded=true`}
+                className="w-full h-[600px] border-0"
+                onLoad={() => setLoading(false)}
+                onError={() => {
+                  setLoading(false);
+                  setError('Failed to load preview');
+                }}
+              />
+            </div>
+          ) : previewType === 'excel' ? (
+            <div className="bg-white p-6 text-center">
+              <p className="text-gray-600 mb-4">
+                Excel files cannot be previewed in the browser. Download to view the spreadsheet.
+              </p>
+              <a
+                href={previewUrl}
+                download
+                className="inline-block px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700"
+              >
+                Download Spreadsheet
+              </a>
+            </div>
+          ) : previewType === 'text' ? (
+            <div className="bg-gray-50 p-4 rounded">
+              <iframe
+                src={previewUrl}
+                className="w-full h-[600px] border border-gray-200 rounded"
+                onLoad={() => setLoading(false)}
+              />
             </div>
           ) : null}
 
