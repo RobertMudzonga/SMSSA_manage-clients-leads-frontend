@@ -155,15 +155,32 @@ export default function LeadDetailModal({
 
           {/* Form Responses Section */}
           {lead.form_responses && Array.isArray(lead.form_responses) && lead.form_responses.length > 0 && (
-            <div className="border-t pt-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Form Responses
-              </label>
-              <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+            <div className="border-t pt-6">
+              <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <FileText className="w-4 h-4 text-blue-600" />
+                Form Responses ({lead.form_responses.length})
+              </h3>
+              <div className="grid grid-cols-1 gap-4">
                 {lead.form_responses.map((response, index) => (
-                  <div key={index} className="border-b border-gray-200 pb-2 last:border-b-0 last:pb-0">
-                    <p className="text-xs font-semibold text-gray-600 mb-1">{response.question}</p>
-                    <p className="text-sm text-gray-900">{response.answer}</p>
+                  <div 
+                    key={index} 
+                    className="bg-white border border-gray-200 rounded-lg p-4 hover:border-blue-300 hover:shadow-sm transition-all duration-200"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-blue-700 uppercase tracking-wider mb-2">
+                          Question {index + 1}
+                        </p>
+                        <p className="text-sm font-medium text-gray-900 mb-3 leading-relaxed">
+                          {response.question}
+                        </p>
+                        <div className="bg-gray-50 rounded p-3 border-l-4 border-blue-500">
+                          <p className="text-sm text-gray-700 whitespace-pre-wrap break-words">
+                            {response.answer}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
