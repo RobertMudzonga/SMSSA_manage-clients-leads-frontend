@@ -46,7 +46,9 @@ const SUBMISSION_TYPES = [
   'Prohibitions appeal',
   'Overstay Appeals',
   'Sheriff',
-  'High Court'
+  'High Court',
+  'E-visa portal',
+  'Consulate'
 ];
 
 export default function SubmissionsView({
