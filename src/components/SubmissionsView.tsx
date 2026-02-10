@@ -407,7 +407,7 @@ export default function SubmissionsView({
           setSelectedSubmission(null);
         }
       }}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[500px] max-h-[90vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>
               {selectedSubmission ? 'Edit Submission' : 'New Submission'}
@@ -417,7 +417,7 @@ export default function SubmissionsView({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">
+          <div className="space-y-4 py-4 overflow-y-auto flex-1">
             {/* Project Selection */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -535,7 +535,7 @@ export default function SubmissionsView({
               Cancel
             </Button>
             <Button onClick={handleSubmit} className="bg-blue-600 hover:bg-blue-700">
-              {selectedSubmission ? 'Update' : 'Create'} Submission
+              {selectedSubmission ? 'Update' : 'Submit'}
             </Button>
           </DialogFooter>
         </DialogContent>
