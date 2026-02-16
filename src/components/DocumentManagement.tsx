@@ -24,6 +24,7 @@ import {
   Clock,
   User,
   Calendar,
+  Scale,
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Input } from './ui/input';
@@ -44,11 +45,21 @@ interface Project {
   project_name: string;
 }
 
+interface LegalCase {
+  case_id: number;
+  case_reference: string;
+  case_title: string;
+  case_type: string;
+  case_status: string;
+  client_name: string;
+}
+
 interface Document {
   document_id: number;
   name: string;
   project_id: number;
   project_name: string;
+  legal_case_id?: number;
   description?: string;
   document_type?: string;
   size: number;
@@ -73,11 +84,14 @@ export default function DocumentManagement() {
   
   // State management
   const [projects, setProjects] = useState<Project[]>([]);
+  const [legalCases, setLegalCases] = useState<LegalCase[]>([]);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [selectedLegalCase, setSelectedLegalCase] = useState<LegalCase | null>(null);
   const [folders, setFolders] = useState<Folder[]>([]);
   const [selectedFolder, setSelectedFolder] = useState<Folder | null>(null);
   const [documents, setDocuments] = useState<Document[]>([]);
   const [filteredDocuments, setFilteredDocuments] = useState<Document[]>([]);
+  const [activeTab, setActiveTab] = useState<'projects' | 'legal'>('projects');
   
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -94,9 +108,10 @@ export default function DocumentManagement() {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
 
-  // Fetch projects on mount
+  // Fetch projects and legal cases on mount
   useEffect(() => {
     fetchProjects();
+    fetchLegalCases();
   }, []);
 
   // Fetch folders and documents when project changes
@@ -106,6 +121,13 @@ export default function DocumentManagement() {
       fetchProjectDocuments(selectedProject.project_id);
     }
   }, [selectedProject]);
+
+  // Fetch documents when legal case changes
+  useEffect(() => {
+    if (selectedLegalCase) {
+      fetchLegalCaseDocuments(selectedLegalCase.case_id);
+    }
+  }, [selectedLegalCase]);
 
   // Fetch folder documents when folder changes
   useEffect(() => {
@@ -139,14 +161,34 @@ export default function DocumentManagement() {
       if (!response.ok) throw new Error('Failed to fetch projects');
       const data = await response.json();
       setProjects(data);
-      if (data.length > 0) {
-        setSelectedProject(data[0]);
-      }
       setLoading(false);
     } catch (error) {
       console.error('Error fetching projects:', error);
       toast({ title: 'Error fetching projects', variant: 'destructive' });
       setLoading(false);
+    }
+  };
+
+  const fetchLegalCases = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/legal-cases`);
+      if (!response.ok) throw new Error('Failed to fetch legal cases');
+      const data = await response.json();
+      setLegalCases(data.cases || []);
+    } catch (error) {
+      console.error('Error fetching legal cases:', error);
+    }
+  };
+
+  const fetchLegalCaseDocuments = async (caseId: number) => {
+    try {
+      const response = await fetch(`${API_BASE}/legal-cases/${caseId}/documents`);
+      if (!response.ok) throw new Error('Failed to fetch documents');
+      const data = await response.json();
+      setDocuments(data.documents || []);
+    } catch (error) {
+      console.error('Error fetching legal case documents:', error);
+      toast({ title: 'Error fetching documents', variant: 'destructive' });
     }
   };
 
@@ -288,35 +330,221 @@ export default function DocumentManagement() {
     );
   }
 
-  // Show projects view if no project selected
-  if (!selectedProject) {
+  // Show projects/legal cases view if no project or legal case selected
+  if (!selectedProject && !selectedLegalCase) {
     return (
       <div className="flex flex-col h-full bg-gray-50">
         {/* Header */}
         <div className="border-b border-gray-200 bg-white p-6">
-          <h1 className="text-2xl font-bold text-gray-900">Projects</h1>
-          <p className="text-sm text-gray-500 mt-1">Select a project to manage documents</p>
+          <h1 className="text-2xl font-bold text-gray-900">Document Management</h1>
+          <p className="text-sm text-gray-500 mt-1">Select a project or legal case to manage documents</p>
         </div>
 
-        {/* Projects Grid */}
+        {/* Tabs for Projects and Legal Cases */}
         <div className="flex-1 overflow-y-auto p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {projects.map((project) => (
-              <button
-                key={project.project_id}
-                onClick={() => setSelectedProject(project)}
-                className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-lg hover:border-blue-300 transition-all"
-              >
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="p-2 bg-blue-100 rounded-lg">
-                    <Folder className="w-6 h-6 text-blue-600" />
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'projects' | 'legal')} className="w-full">
+            <TabsList className="mb-6">
+              <TabsTrigger value="projects" className="gap-2">
+                <Folder className="w-4 h-4" />
+                Projects ({projects.length})
+              </TabsTrigger>
+              <TabsTrigger value="legal" className="gap-2">
+                <Scale className="w-4 h-4" />
+                Legal Cases ({legalCases.length})
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="projects">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {projects.map((project) => (
+                  <button
+                    key={project.project_id}
+                    onClick={() => {
+                      setSelectedProject(project);
+                      setSelectedLegalCase(null);
+                    }}
+                    className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-lg hover:border-blue-300 transition-all text-left"
+                  >
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="p-2 bg-blue-100 rounded-lg">
+                        <Folder className="w-6 h-6 text-blue-600" />
+                      </div>
+                      <h3 className="font-semibold text-gray-900">{project.project_name}</h3>
+                    </div>
+                    <p className="text-sm text-gray-600">Click to manage documents</p>
+                  </button>
+                ))}
+                {projects.length === 0 && (
+                  <div className="col-span-full text-center py-8 text-gray-500">
+                    No projects found
                   </div>
-                  <h3 className="font-semibold text-gray-900">{project.project_name}</h3>
-                </div>
-                <p className="text-sm text-gray-600">Click to manage documents</p>
+                )}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="legal">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {legalCases.map((legalCase) => (
+                  <button
+                    key={legalCase.case_id}
+                    onClick={() => {
+                      setSelectedLegalCase(legalCase);
+                      setSelectedProject(null);
+                      setFolders([]);
+                      setSelectedFolder(null);
+                    }}
+                    className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-lg hover:border-teal-300 transition-all text-left"
+                  >
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="p-2 bg-teal-100 rounded-lg">
+                        <Scale className="w-6 h-6 text-teal-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-gray-900 truncate">{legalCase.case_title}</h3>
+                        <p className="text-xs text-gray-500">{legalCase.case_reference}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 mt-2">
+                      <span className={`text-xs px-2 py-1 rounded-full ${
+                        legalCase.case_status === 'active' ? 'bg-blue-100 text-blue-700' :
+                        legalCase.case_status === 'closed' ? 'bg-green-100 text-green-700' :
+                        'bg-gray-100 text-gray-700'
+                      }`}>
+                        {legalCase.case_status}
+                      </span>
+                      <span className="text-xs text-gray-500">{legalCase.client_name}</span>
+                    </div>
+                  </button>
+                ))}
+                {legalCases.length === 0 && (
+                  <div className="col-span-full text-center py-8 text-gray-500">
+                    No legal cases found
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+          </Tabs>
+        </div>
+      </div>
+    );
+  }
+
+  // Show legal case documents view if legal case selected
+  if (selectedLegalCase) {
+    return (
+      <div className="flex-1 flex flex-col overflow-hidden h-full bg-gray-50">
+        {/* Header */}
+        <div className="border-b border-gray-200 bg-white p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setSelectedLegalCase(null)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <ChevronRight className="w-5 h-5 rotate-180" />
               </button>
-            ))}
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">{selectedLegalCase.case_title}</h1>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-sm text-gray-500">{selectedLegalCase.case_reference}</span>
+                  <span className={`text-xs px-2 py-1 rounded-full ${
+                    selectedLegalCase.case_status === 'active' ? 'bg-blue-100 text-blue-700' :
+                    selectedLegalCase.case_status === 'closed' ? 'bg-green-100 text-green-700' :
+                    'bg-gray-100 text-gray-700'
+                  }`}>
+                    {selectedLegalCase.case_status}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <Dialog open={showUploadModal} onOpenChange={setShowUploadModal}>
+              <DialogTrigger asChild>
+                <Button className="gap-2">
+                  <Upload className="w-4 h-4" />
+                  Upload Document
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Upload Document to Legal Case</DialogTitle>
+                </DialogHeader>
+                <UploadDocumentForm
+                  legalCaseId={selectedLegalCase.case_id}
+                  onUpload={async () => {
+                    setShowUploadModal(false);
+                    await fetchLegalCaseDocuments(selectedLegalCase.case_id);
+                    toast({ title: 'Document uploaded successfully' });
+                  }}
+                  onClose={() => setShowUploadModal(false)}
+                  isUploading={uploading}
+                />
+              </DialogContent>
+            </Dialog>
           </div>
+
+          {/* Search and Filters */}
+          <div className="flex gap-4">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Input
+                  type="text"
+                  placeholder="Search documents..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Documents List */}
+        <div className="flex-1 overflow-y-auto p-6">
+          {filteredDocuments.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-64">
+              <FileText className="w-12 h-12 text-gray-300 mb-4" />
+              <p className="text-gray-500 mb-4">No documents found for this legal case</p>
+              <Button onClick={() => setShowUploadModal(true)} className="gap-2">
+                <Upload className="w-4 h-4" />
+                Upload First Document
+              </Button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {filteredDocuments.map((doc) => (
+                <div
+                  key={doc.document_id}
+                  className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all cursor-pointer"
+                  onClick={() => setSelectedDocument(doc)}
+                >
+                  <div className="flex items-start gap-3 mb-3">
+                    <div className="p-2 bg-gray-100 rounded-lg">
+                      {getFileIcon(doc.document_type)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-medium text-gray-900 truncate">{doc.name}</h3>
+                      <p className="text-xs text-gray-500">{formatFileSize(doc.size)}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between text-xs text-gray-500">
+                    <span>{formatDate(doc.created_at)}</span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        window.open(`${API_BASE}/documents/${doc.document_id}/download`, '_blank');
+                      }}
+                    >
+                      <Download className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     );

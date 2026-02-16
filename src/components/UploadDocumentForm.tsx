@@ -10,6 +10,7 @@ import { Loader2 } from 'lucide-react';
 interface UploadDocumentFormProps {
   projectId?: number;
   folderId?: number;
+  legalCaseId?: number;
   onUpload: (document: any) => void;
   onClose: () => void;
   isUploading?: boolean;
@@ -18,6 +19,7 @@ interface UploadDocumentFormProps {
 export default function UploadDocumentForm({
   projectId,
   folderId,
+  legalCaseId,
   onUpload,
   onClose,
   isUploading = false
@@ -57,10 +59,10 @@ export default function UploadDocumentForm({
       return;
     }
 
-    if (!projectId) {
+    if (!projectId && !legalCaseId) {
       toast({
-        title: 'No project selected',
-        description: 'Please select a project first',
+        title: 'No target selected',
+        description: 'Please select a project or legal case first',
         variant: 'destructive'
       });
       return;
@@ -77,7 +79,12 @@ export default function UploadDocumentForm({
       if (files.length === 1) {
         const formData = new FormData();
         formData.append('file', files[0]);
-        formData.append('project_id', String(projectId));
+        if (projectId) {
+          formData.append('project_id', String(projectId));
+        }
+        if (legalCaseId) {
+          formData.append('legal_case_id', String(legalCaseId));
+        }
         if (folderId) {
           formData.append('folder_id', String(folderId));
         }
@@ -109,7 +116,12 @@ export default function UploadDocumentForm({
       } else {
         const formData = new FormData();
         files.forEach((f) => formData.append('files', f));
-        formData.append('project_id', String(projectId));
+        if (projectId) {
+          formData.append('project_id', String(projectId));
+        }
+        if (legalCaseId) {
+          formData.append('legal_case_id', String(legalCaseId));
+        }
         if (folderId) {
           formData.append('folder_id', String(folderId));
         }
