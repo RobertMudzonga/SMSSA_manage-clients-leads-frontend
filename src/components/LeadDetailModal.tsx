@@ -1,8 +1,90 @@
 import { useState } from 'react';
-import { X, MessageSquare, Trash2, Archive, Calendar, Mail, Phone, Building, UserPlus, FileText } from 'lucide-react';
+import { X, MessageSquare, Trash2, Archive, Calendar, Mail, Phone, Building, UserPlus, FileText, Clock, User } from 'lucide-react';
 import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+
+// Note entry interface
+interface NoteEntry {
+  timestamp: string;
+  user_id: number | null;
+  user_name: string;
+  content: string;
+  type?: 'user' | 'system';
+}
+
+// Parse notes string into structured entries
+function parseNotes(notesString: string | null | undefined): NoteEntry[] {
+  if (!notesString) return [];
+  
+  const entries: NoteEntry[] = [];
+  const parts = notesString.split('---NOTE_ENTRY---');
+  
+  // First part might be legacy plain text notes
+  if (parts[0] && parts[0].trim()) {
+    // Parse old-style notes with [timestamp] format
+    const legacyLines = parts[0].split('\n').filter(line => line.trim());
+    for (const line of legacyLines) {
+      const match = line.match(/^\[(\d{4}-\d{2}-\d{2}T[\d:\.Z]+|\d+\/\d+\/\d+,?\s*[\d:]+\s*(AM|PM)?)\]\s*(.+)$/i);
+      if (match) {
+        entries.push({
+          timestamp: match[1],
+          user_id: null,
+          user_name: 'Unknown',
+          content: match[3],
+          type: match[3].includes('MARKED AS LOST') || match[3].includes('RECOVERED') ? 'system' : 'user'
+        });
+      } else if (line.trim()) {
+        // Plain text without timestamp
+        entries.push({
+          timestamp: '',
+          user_id: null,
+          user_name: 'Unknown',
+          content: line.trim(),
+          type: 'user'
+        });
+      }
+    }
+  }
+  
+  // Parse structured note entries
+  for (let i = 1; i < parts.length; i++) {
+    try {
+      const entry = JSON.parse(parts[i]);
+      entries.push(entry);
+    } catch (e) {
+      // If parsing fails, treat as plain text
+      if (parts[i].trim()) {
+        entries.push({
+          timestamp: new Date().toISOString(),
+          user_id: null,
+          user_name: 'Unknown',
+          content: parts[i].trim(),
+          type: 'user'
+        });
+      }
+    }
+  }
+  
+  return entries;
+}
+
+// Format timestamp for display
+function formatTimestamp(timestamp: string): string {
+  if (!timestamp) return '';
+  try {
+    const date = new Date(timestamp);
+    return date.toLocaleString('en-ZA', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  } catch {
+    return timestamp;
+  }
+}
 
 interface LeadDetailModalProps {
   lead: any;
@@ -224,8 +306,38 @@ export default function LeadDetailModal({
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Notes & History
               </label>
-              <div className="bg-gray-50 rounded-lg p-4 text-sm text-gray-700 whitespace-pre-wrap">
-                {lead.notes}
+              <div className="bg-gray-50 rounded-lg p-4 space-y-3 max-h-64 overflow-y-auto">
+                {parseNotes(lead.notes).length > 0 ? (
+                  parseNotes(lead.notes).map((note, index) => (
+                    <div 
+                      key={index} 
+                      className={`p-3 rounded-lg border ${
+                        note.type === 'system' 
+                          ? 'bg-amber-50 border-amber-200' 
+                          : 'bg-white border-gray-200'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 text-xs text-gray-500 mb-1">
+                        {note.timestamp && (
+                          <>
+                            <Clock className="w-3 h-3" />
+                            <span>{formatTimestamp(note.timestamp)}</span>
+                          </>
+                        )}
+                        {note.user_name && (
+                          <>
+                            <span className="text-gray-300">•</span>
+                            <User className="w-3 h-3" />
+                            <span className="font-medium text-gray-600">{note.user_name}</span>
+                          </>
+                        )}
+                      </div>
+                      <p className="text-sm text-gray-700">{note.content}</p>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-gray-500 italic">No notes yet</p>
+                )}
               </div>
             </div>
           )}

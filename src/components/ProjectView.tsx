@@ -5,8 +5,10 @@ import { Card } from './ui/card';
 import { Badge } from './ui/badge';
 import { Checkbox } from './ui/checkbox';
 import DocumentChecklistView from './DocumentChecklistView';
+import CreateClientPortalModal from './CreateClientPortalModal';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { ExternalLink } from 'lucide-react';
 
 interface ProjectViewProps {
   projectId: string;
@@ -19,6 +21,7 @@ export default function ProjectView({ projectId, onClose, onDataChange }: Projec
   const [loading, setLoading] = useState(true);
   const [stage, setStage] = useState<number>(1);
   const [showChecklist, setShowChecklist] = useState<boolean>(false);
+  const [showClientPortalModal, setShowClientPortalModal] = useState<boolean>(false);
   const [reviews, setReviews] = useState<any[]>([]);
   const [employees, setEmployees] = useState<any[]>([]);
   const { user, isAdmin } = useAuth();
@@ -254,6 +257,10 @@ export default function ProjectView({ projectId, onClose, onDataChange }: Projec
           <p className="text-sm text-gray-600">Client: {project?.client_name}</p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setShowClientPortalModal(true)}>
+            <ExternalLink className="h-4 w-4 mr-2" />
+            Client Portal
+          </Button>
           <Button variant="outline" onClick={() => setShowChecklist(true)}>Checklist</Button>
           <Button variant="destructive" onClick={async () => {
             if (!confirm('Delete this project? This action cannot be undone.')) return;
@@ -741,6 +748,17 @@ export default function ProjectView({ projectId, onClose, onDataChange }: Projec
           )}
         </div>
       </div>
+
+      {/* Client Portal Modal */}
+      {showClientPortalModal && (
+        <CreateClientPortalModal
+          projectId={projectId}
+          projectName={project?.project_name || ''}
+          clientName={project?.client_name}
+          clientEmail={project?.client_email}
+          onClose={() => setShowClientPortalModal(false)}
+        />
+      )}
     </div>
   );
 }

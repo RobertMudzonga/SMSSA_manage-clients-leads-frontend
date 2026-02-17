@@ -263,7 +263,11 @@ export default function AppLayout() {
       const response = await fetch(`${API_BASE}/prospects/${id}/lost`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reason })
+        body: JSON.stringify({ 
+          reason,
+          user_id: user?.id || null,
+          user_name: user?.full_name || user?.email || 'Unknown User'
+        })
       });
       if (response.ok) {
         toast({ title: 'Prospect marked as lost' });

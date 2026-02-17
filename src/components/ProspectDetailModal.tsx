@@ -1,8 +1,92 @@
 import React, { useState } from 'react';
 import { formatForDateInput } from '@/utils/formatDate';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { X, Calendar, Tag } from 'lucide-react';
+import { X, Calendar, Tag, Clock, User, MessageSquare } from 'lucide-react';
+import { API_BASE } from '@/lib/api';
+
+// Note entry interface
+interface NoteEntry {
+  timestamp: string;
+  user_id: number | null;
+  user_name: string;
+  content: string;
+  type?: 'user' | 'system';
+}
+
+// Parse notes string into structured entries
+function parseNotes(notesString: string | null | undefined): NoteEntry[] {
+  if (!notesString) return [];
+  
+  const entries: NoteEntry[] = [];
+  const parts = notesString.split('---NOTE_ENTRY---');
+  
+  // First part might be legacy plain text notes
+  if (parts[0] && parts[0].trim()) {
+    // Parse old-style notes with [timestamp] format
+    const legacyLines = parts[0].split('\n').filter(line => line.trim());
+    for (const line of legacyLines) {
+      const match = line.match(/^\[(\d{4}-\d{2}-\d{2}T[\d:\.Z]+|\d+\/\d+\/\d+,?\s*[\d:]+\s*(AM|PM)?)\]\s*(.+)$/i);
+      if (match) {
+        entries.push({
+          timestamp: match[1],
+          user_id: null,
+          user_name: 'Unknown',
+          content: match[3],
+          type: match[3].includes('MARKED AS LOST') || match[3].includes('RECOVERED') ? 'system' : 'user'
+        });
+      } else if (line.trim()) {
+        // Plain text without timestamp
+        entries.push({
+          timestamp: '',
+          user_id: null,
+          user_name: 'Unknown',
+          content: line.trim(),
+          type: 'user'
+        });
+      }
+    }
+  }
+  
+  // Parse structured note entries
+  for (let i = 1; i < parts.length; i++) {
+    try {
+      const entry = JSON.parse(parts[i]);
+      entries.push(entry);
+    } catch (e) {
+      // If parsing fails, treat as plain text
+      if (parts[i].trim()) {
+        entries.push({
+          timestamp: new Date().toISOString(),
+          user_id: null,
+          user_name: 'Unknown',
+          content: parts[i].trim(),
+          type: 'user'
+        });
+      }
+    }
+  }
+  
+  return entries;
+}
+
+// Format timestamp for display
+function formatTimestamp(timestamp: string): string {
+  if (!timestamp) return '';
+  try {
+    const date = new Date(timestamp);
+    return date.toLocaleString('en-ZA', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  } catch {
+    return timestamp;
+  }
+}
 
 interface Prospect {
   id: string | number;
@@ -75,7 +159,9 @@ export default function ProspectDetailModal({
   onMarkLost,
   onSetTags
 }: ProspectDetailModalProps) {
+  const { user } = useAuth();
   const [notes, setNotes] = useState('');
+  const [newComment, setNewComment] = useState('');
   const [contactName, setContactName] = useState(prospect?.name || '');
   const [dealName, setDealName] = useState(prospect?.deal_name || '');
   const [email, setEmail] = useState(prospect?.email || '');
@@ -194,6 +280,33 @@ export default function ProspectDetailModal({
 
   const handleMarkLost = () => {
     if (onMarkLost) onMarkLost(String(prospect.id), 'Marked lost from UI');
+  };
+
+  const handleAddComment = async () => {
+    if (!newComment.trim()) return;
+    try {
+      const response = await fetch(`${API_BASE}/prospects/${prospect.id}/comment`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          comment: newComment,
+          user_id: user?.id || null,
+          user_name: user?.full_name || user?.email || 'Unknown User'
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to add comment');
+      }
+
+      const updatedProspect = await response.json();
+      setNotes(updatedProspect.notes || '');
+      setNewComment('');
+      toast({ title: 'Comment added successfully' });
+    } catch (err) {
+      console.error('Error adding comment:', err);
+      toast({ title: 'Failed to add comment', variant: 'destructive' });
+    }
   };
 
   const handleDelete = () => {
@@ -316,9 +429,65 @@ export default function ProspectDetailModal({
               <button onClick={handleMarkLost} className="px-4 py-2 bg-yellow-600 text-white rounded-lg">Mark Lost</button>
               <button onClick={handleDelete} className="px-4 py-2 bg-red-600 text-white rounded-lg">Delete</button>
             </div>
-            <div className="mt-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
-              <textarea value={notes} onChange={e => setNotes(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+          </div>
+
+          {/* Notes & History */}
+          <div className="border border-gray-200 rounded-lg p-4">
+            <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <MessageSquare className="w-5 h-5" />
+              Notes & History
+            </h3>
+            <div className="bg-gray-50 rounded-lg p-4 space-y-3 max-h-64 overflow-y-auto mb-4">
+              {parseNotes(notes).length > 0 ? (
+                parseNotes(notes).map((note, index) => (
+                  <div 
+                    key={index} 
+                    className={`p-3 rounded-lg border ${
+                      note.type === 'system' 
+                        ? 'bg-amber-50 border-amber-200' 
+                        : 'bg-white border-gray-200'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 text-xs text-gray-500 mb-1">
+                      {note.timestamp && (
+                        <>
+                          <Clock className="w-3 h-3" />
+                          <span>{formatTimestamp(note.timestamp)}</span>
+                        </>
+                      )}
+                      {note.user_name && (
+                        <>
+                          <span className="text-gray-300">•</span>
+                          <User className="w-3 h-3" />
+                          <span className="font-medium text-gray-600">{note.user_name}</span>
+                        </>
+                      )}
+                    </div>
+                    <p className="text-sm text-gray-700">{note.content}</p>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-gray-500 italic">No notes yet</p>
+              )}
+            </div>
+            
+            {/* Add Comment Section */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Add Comment</label>
+              <textarea 
+                value={newComment} 
+                onChange={e => setNewComment(e.target.value)} 
+                placeholder="Add a note or comment about this prospect..."
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg mb-2"
+                rows={3}
+              />
+              <button 
+                onClick={handleAddComment}
+                disabled={!newComment.trim()}
+                className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Add Comment
+              </button>
             </div>
           </div>
 

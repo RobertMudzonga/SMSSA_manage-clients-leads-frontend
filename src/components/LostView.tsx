@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import { ArrowRight, RefreshCw, Trash2, Search } from 'lucide-react';
+import { ArrowRight, RefreshCw, Trash2, Search, Clock, User } from 'lucide-react';
 import { Card } from './ui/card';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 import { API_BASE } from '../lib/api';
 
 interface LostLead {
@@ -30,6 +31,7 @@ interface LostProspect {
 }
 
 export default function LostView() {
+  const { user } = useAuth();
   const [lostLeads, setLostLeads] = useState<LostLead[]>([]);
   const [lostProspects, setLostProspects] = useState<LostProspect[]>([]);
   const [loading, setLoading] = useState(false);
@@ -97,6 +99,10 @@ export default function LostView() {
       const response = await fetch(`${API_BASE}/leads/${leadId}/recover`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: user?.id || null,
+          user_name: user?.full_name || user?.email || 'Unknown User'
+        }),
       });
 
       if (response.ok) {
@@ -117,6 +123,10 @@ export default function LostView() {
       const response = await fetch(`${API_BASE}/prospects/${prospectId}/recover`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: user?.id || null,
+          user_name: user?.full_name || user?.email || 'Unknown User'
+        }),
       });
 
       if (response.ok) {
@@ -160,14 +170,54 @@ export default function LostView() {
     return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
-  const getLostReason = (notes?: string) => {
-    if (!notes) return '';
+  const getLostReason = (notes?: string): { reason: string; user_name?: string; timestamp?: string } | null => {
+    if (!notes) return null;
+    
+    // Try to parse new structured format first
+    const parts = notes.split('---NOTE_ENTRY---');
+    for (let i = parts.length - 1; i >= 0; i--) {
+      if (parts[i].includes('MARKED AS LOST')) {
+        try {
+          const entry = JSON.parse(parts[i]);
+          if (entry.content && entry.content.includes('MARKED AS LOST')) {
+            return {
+              reason: entry.content.replace('MARKED AS LOST: ', ''),
+              user_name: entry.user_name,
+              timestamp: entry.timestamp
+            };
+          }
+        } catch {
+          // Fall through to legacy parsing
+        }
+      }
+    }
+    
+    // Legacy format parsing
     const lines = (notes || '').split('\n');
     const lostLine = lines.find(line => line.includes('MARKED AS LOST'));
     if (lostLine) {
-      return lostLine.replace(/.*MARKED AS LOST: /, '').trim();
+      return {
+        reason: lostLine.replace(/.*MARKED AS LOST: /, '').trim()
+      };
     }
-    return '';
+    return null;
+  };
+
+  // Format timestamp for display
+  const formatTimestamp = (timestamp: string): string => {
+    if (!timestamp) return '';
+    try {
+      const date = new Date(timestamp);
+      return date.toLocaleString('en-ZA', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch {
+      return timestamp;
+    }
   };
 
   return (
@@ -257,9 +307,23 @@ export default function LostView() {
                           </p>
                         )}
                         {getLostReason(lead.notes) && (
-                          <p className="text-xs text-red-600 mt-2 italic">
-                            Lost reason: {getLostReason(lead.notes)}
-                          </p>
+                          <div className="mt-2 p-2 bg-red-50 rounded border border-red-100">
+                            <p className="text-xs text-red-600 italic">
+                              Lost reason: {getLostReason(lead.notes)?.reason}
+                            </p>
+                            {getLostReason(lead.notes)?.user_name && (
+                              <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
+                                <User className="w-3 h-3" />
+                                <span>By: {getLostReason(lead.notes)?.user_name}</span>
+                                {getLostReason(lead.notes)?.timestamp && (
+                                  <>
+                                    <Clock className="w-3 h-3 ml-2" />
+                                    <span>{formatTimestamp(getLostReason(lead.notes)?.timestamp || '')}</span>
+                                  </>
+                                )}
+                              </div>
+                            )}
+                          </div>
                         )}
                         {lead.updated_at && (
                           <p className="text-xs text-gray-400 mt-2">
@@ -328,9 +392,23 @@ export default function LostView() {
                           </p>
                         )}
                         {getLostReason(prospect.notes) && (
-                          <p className="text-xs text-red-600 mt-2 italic">
-                            Lost reason: {getLostReason(prospect.notes)}
-                          </p>
+                          <div className="mt-2 p-2 bg-red-50 rounded border border-red-100">
+                            <p className="text-xs text-red-600 italic">
+                              Lost reason: {getLostReason(prospect.notes)?.reason}
+                            </p>
+                            {getLostReason(prospect.notes)?.user_name && (
+                              <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
+                                <User className="w-3 h-3" />
+                                <span>By: {getLostReason(prospect.notes)?.user_name}</span>
+                                {getLostReason(prospect.notes)?.timestamp && (
+                                  <>
+                                    <Clock className="w-3 h-3 ml-2" />
+                                    <span>{formatTimestamp(getLostReason(prospect.notes)?.timestamp || '')}</span>
+                                  </>
+                                )}
+                              </div>
+                            )}
+                          </div>
                         )}
                         {prospect.updated_at && (
                           <p className="text-xs text-gray-400 mt-2">

@@ -35,7 +35,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { API_BASE } from '@/lib/api';
-import { Plus, ChevronRight, Clock, AlertCircle, CheckCircle2, Scale, FileText, Users, Trash2, Upload, Download, File, Search, FileDown, FileUp, Filter, Pencil, Square, CheckSquare } from 'lucide-react';
+import { Plus, ChevronRight, Clock, AlertCircle, CheckCircle2, Scale, FileText, Users, Trash2, Upload, Download, File, Search, FileDown, FileUp, Filter, Pencil, Square, CheckSquare, Link } from 'lucide-react';
+import CreateClientPortalModal from './CreateClientPortalModal';
 
 // Types
 interface LegalCase {
@@ -145,6 +146,7 @@ export default function LegalProjectsView() {
   const [selectedCaseIds, setSelectedCaseIds] = useState<Set<number>>(new Set());
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
   const [deletingBulk, setDeletingBulk] = useState(false);
+  const [showClientPortalModal, setShowClientPortalModal] = useState(false);
   const { toast } = useToast();
 
   // New case form state
@@ -1497,6 +1499,16 @@ export default function LegalProjectsView() {
                     Edit Case
                   </Button>
 
+                  {/* Client Portal Button */}
+                  <Button
+                    variant="outline"
+                    className="w-full mt-2 text-teal-600 border-teal-600 hover:bg-teal-50"
+                    onClick={() => setShowClientPortalModal(true)}
+                  >
+                    <Link className="w-4 h-4 mr-2" />
+                    Create Client Portal
+                  </Button>
+
                   {/* Delete Button */}
                   <Button 
                     variant="outline" 
@@ -1712,6 +1724,18 @@ export default function LegalProjectsView() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Client Portal Modal */}
+      {showClientPortalModal && selectedCase && (
+        <CreateClientPortalModal
+          caseId={selectedCase.case_id}
+          projectName={selectedCase.case_title || selectedCase.case_reference}
+          clientName={selectedCase.client_name}
+          clientEmail={selectedCase.client_email}
+          entityType="legal_case"
+          onClose={() => setShowClientPortalModal(false)}
+        />
+      )}
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Progress } from './ui/progress';
 import LeadDetailModal from './LeadDetailModal';
+import { useAuth } from '@/contexts/AuthContext';
 
 import { API_BASE } from '../lib/api';
 
@@ -142,6 +143,7 @@ const ColdLeadCard = ({ lead, onDragStart, onAdvanceStage, onQuoteSent, onClick 
  * Main Cold Leads Kanban App Component
  */
 export default function ColdLeadsKanbanApp() {
+    const { user } = useAuth();
     const [leads, setLeads] = useState([]);
     const [employees, setEmployees] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -320,21 +322,23 @@ export default function ColdLeadsKanbanApp() {
     // --- Lead Detail Modal Handlers ---
     const handleAddComment = async (leadId, comment) => {
         try {
-            const lead = leads.find(l => l.lead_id === leadId);
-            const newNote = `${lead.notes || ''}\n[${new Date().toLocaleString()}] ${comment}`;
-            
             const response = await fetch(`${API_BASE}/leads/${leadId}/comment`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ comment }),
+                body: JSON.stringify({ 
+                    comment,
+                    user_id: user?.id || null,
+                    user_name: user?.full_name || user?.email || 'Unknown User'
+                }),
             });
 
             if (!response.ok) {
                 throw new Error('Failed to add comment');
             }
 
+            const updatedLead = await response.json();
             setLeads(prevLeads =>
-                prevLeads.map(l => l.lead_id === leadId ? { ...l, notes: newNote } : l)
+                prevLeads.map(l => l.lead_id === leadId ? updatedLead : l)
             );
             showToast('Comment added successfully', 'success');
         } catch (err) {
@@ -348,7 +352,11 @@ export default function ColdLeadsKanbanApp() {
             const response = await fetch(`${API_BASE}/leads/${leadId}/lost`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ reason }),
+                body: JSON.stringify({ 
+                    reason,
+                    user_id: user?.id || null,
+                    user_name: user?.full_name || user?.email || 'Unknown User'
+                }),
             });
 
             if (!response.ok) {
