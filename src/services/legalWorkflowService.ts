@@ -23,15 +23,22 @@ import {
   HighCourtStep,
   ProhibitedPersonsOutcome,
   SettlementOutcome,
+  AppealsStep,
   OverstayAppealData,
   ProhibitedPersonsData,
   HighCourtData,
+  Appeals84Data,
+  Appeals86Data,
   OVERSTAY_APPEAL_STEPS,
   PROHIBITED_PERSONS_STEPS,
   HIGH_COURT_STEPS,
+  APPEALS_8_4_STEPS,
+  APPEALS_8_6_STEPS,
   createDefaultOverstayAppealData,
   createDefaultProhibitedPersonsData,
   createDefaultHighCourtData,
+  createDefaultAppeals84Data,
+  createDefaultAppeals86Data,
   createInitialStepHistory,
   isOverstayAppealData,
   isProhibitedPersonsData,
@@ -63,6 +70,10 @@ export class LegalWorkflowService {
         return Object.keys(PROHIBITED_PERSONS_STEPS).length;
       case LegalCaseType.HIGH_COURT_EXPEDITION:
         return Object.keys(HIGH_COURT_STEPS).length;
+      case LegalCaseType.APPEALS_8_4:
+        return Object.keys(APPEALS_8_4_STEPS).length;
+      case LegalCaseType.APPEALS_8_6:
+        return Object.keys(APPEALS_8_6_STEPS).length;
       default:
         return 0;
     }
@@ -79,6 +90,10 @@ export class LegalWorkflowService {
         return PROHIBITED_PERSONS_STEPS[stepNumber as ProhibitedPersonsStep] || 'Unknown Step';
       case LegalCaseType.HIGH_COURT_EXPEDITION:
         return HIGH_COURT_STEPS[stepNumber as HighCourtStep] || 'Unknown Step';
+      case LegalCaseType.APPEALS_8_4:
+        return APPEALS_8_4_STEPS[stepNumber as AppealsStep] || 'Unknown Step';
+      case LegalCaseType.APPEALS_8_6:
+        return APPEALS_8_6_STEPS[stepNumber as AppealsStep] || 'Unknown Step';
       default:
         return 'Unknown Step';
     }
@@ -95,6 +110,10 @@ export class LegalWorkflowService {
         return PROHIBITED_PERSONS_STEPS;
       case LegalCaseType.HIGH_COURT_EXPEDITION:
         return HIGH_COURT_STEPS;
+      case LegalCaseType.APPEALS_8_4:
+        return APPEALS_8_4_STEPS;
+      case LegalCaseType.APPEALS_8_6:
+        return APPEALS_8_6_STEPS;
       default:
         return {};
     }
@@ -313,6 +332,20 @@ export class LegalWorkflowService {
           nextActions.push('Determine if settlement is reached');
           nextActions.push('If settled, case ends here');
           nextActions.push('If not settled, proceed to High Court');
+        }
+        break;
+
+      case LegalCaseType.APPEALS_8_4:
+      case LegalCaseType.APPEALS_8_6:
+        if (currentStep === AppealsStep.SUBMIT_AT_VFS) {
+          requiresAction = {
+            action_type: 'vfs_center_selection',
+            description: 'Select the VFS center for submission'
+          };
+          nextActions.push('Select VFS center and submit application');
+        }
+        if (currentStep === AppealsStep.OUTCOME) {
+          nextActions.push('Set case outcome (approved/rejected/pending)');
         }
         break;
     }
@@ -884,7 +917,7 @@ export class LegalWorkflowService {
   ): LegalCase {
     const now = new Date().toISOString();
     
-    let workflowData: OverstayAppealData | ProhibitedPersonsData | HighCourtData;
+    let workflowData: OverstayAppealData | ProhibitedPersonsData | HighCourtData | Appeals84Data | Appeals86Data;
     switch (caseType) {
       case LegalCaseType.OVERSTAY_APPEAL:
         workflowData = createDefaultOverstayAppealData();
@@ -894,6 +927,12 @@ export class LegalWorkflowService {
         break;
       case LegalCaseType.HIGH_COURT_EXPEDITION:
         workflowData = createDefaultHighCourtData();
+        break;
+      case LegalCaseType.APPEALS_8_4:
+        workflowData = createDefaultAppeals84Data();
+        break;
+      case LegalCaseType.APPEALS_8_6:
+        workflowData = createDefaultAppeals86Data();
         break;
     }
     

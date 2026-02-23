@@ -42,7 +42,7 @@ import CreateClientPortalModal from './CreateClientPortalModal';
 interface LegalCase {
   case_id: number;
   case_reference: string;
-  case_type: 'overstay_appeal' | 'prohibited_persons' | 'high_court_expedition';
+  case_type: 'overstay_appeal' | 'prohibited_persons' | 'high_court_expedition' | 'appeals_8_4' | 'appeals_8_6';
   case_title: string;
   case_status: 'active' | 'closed' | 'lost' | 'settled' | 'appealing' | 'on_hold';
   client_name: string;
@@ -93,8 +93,21 @@ interface Document {
 const CASE_TYPE_LABELS: Record<string, string> = {
   overstay_appeal: 'Overstay Appeal',
   prohibited_persons: 'Prohibited Persons (V-list)',
-  high_court_expedition: 'High Court/Expedition'
+  high_court_expedition: 'High Court/Expedition',
+  appeals_8_4: 'Appeals 8(4)',
+  appeals_8_6: 'Appeals 8(6)'
 };
+
+const VFS_CENTERS = [
+  'Johannesburg',
+  'Cape Town',
+  'Durban',
+  'Pretoria',
+  'Port Elizabeth',
+  'Bloemfontein',
+  'Nelspruit',
+  'Polokwane'
+];
 
 const STATUS_COLORS: Record<string, string> = {
   active: 'bg-blue-100 text-blue-800',
@@ -156,6 +169,7 @@ export default function LegalProjectsView() {
     client_name: '',
     client_email: '',
     client_phone: '',
+    vfs_center: '',
     priority: 'medium' as const,
     assigned_case_manager_id: '',
     notes: ''
@@ -282,6 +296,7 @@ export default function LegalProjectsView() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...newCase,
+          vfs_center: newCase.vfs_center || null,
           assigned_case_manager_id: newCase.assigned_case_manager_id ? parseInt(newCase.assigned_case_manager_id) : null
         })
       });
@@ -295,6 +310,7 @@ export default function LegalProjectsView() {
           client_name: '',
           client_email: '',
           client_phone: '',
+          vfs_center: '',
           priority: 'medium',
           assigned_case_manager_id: '',
           notes: ''
@@ -549,7 +565,9 @@ export default function LegalProjectsView() {
     const sampleData = [
       ['overstay_appeal', 'Smith Overstay Appeal 2026', 'John Smith', 'john.smith@email.com', '+27821234567', 'high', 'Jane Manager', 'Client has been in SA for 5 years'],
       ['prohibited_persons', 'Davis V-List Removal', 'Mary Davis', 'mary.davis@email.com', '+27829876543', 'medium', '', 'Seeking removal from prohibited persons list'],
-      ['high_court_expedition', 'Wilson Urgent Expedition', 'James Wilson', 'james.wilson@email.com', '+27835551234', 'urgent', 'Jane Manager', 'Urgent matter requiring expedited processing']
+      ['high_court_expedition', 'Wilson Urgent Expedition', 'James Wilson', 'james.wilson@email.com', '+27835551234', 'urgent', 'Jane Manager', 'Urgent matter requiring expedited processing'],
+      ['appeals_8_4', 'Nkosi Appeal 8(4)', 'Lindiwe Nkosi', 'lindiwe.nkosi@email.com', '+27831234567', 'high', 'Jane Manager', 'Appeal under section 8(4)'],
+      ['appeals_8_6', 'Moyo Appeal 8(6)', 'Tendai Moyo', 'tendai.moyo@email.com', '+27839876543', 'medium', 'Jane Manager', 'Appeal under section 8(6)']
     ];
     
     const csvContent = [headers, ...sampleData].map(row => 
@@ -600,6 +618,26 @@ export default function LegalProjectsView() {
         priority: 'urgent',
         case_manager: 'Jane Manager',
         notes: 'Urgent matter requiring expedited processing'
+      },
+      {
+        case_type: 'appeals_8_4',
+        case_title: 'Nkosi Appeal 8(4)',
+        client_name: 'Lindiwe Nkosi',
+        client_email: 'lindiwe.nkosi@email.com',
+        client_phone: '+27831234567',
+        priority: 'high',
+        case_manager: 'Jane Manager',
+        notes: 'Appeal under section 8(4)'
+      },
+      {
+        case_type: 'appeals_8_6',
+        case_title: 'Moyo Appeal 8(6)',
+        client_name: 'Tendai Moyo',
+        client_email: 'tendai.moyo@email.com',
+        client_phone: '+27839876543',
+        priority: 'medium',
+        case_manager: 'Jane Manager',
+        notes: 'Appeal under section 8(6)'
       }
     ];
     
@@ -656,12 +694,14 @@ export default function LegalProjectsView() {
 
       for (const item of importData) {
         // Validate case_type
-        const validTypes = ['overstay_appeal', 'prohibited_persons', 'high_court_expedition'];
+        const validTypes = ['overstay_appeal', 'prohibited_persons', 'high_court_expedition', 'appeals_8_4', 'appeals_8_6'];
         let caseType = item.case_type?.toLowerCase().replace(/ /g, '_') || 'overstay_appeal';
         if (!validTypes.includes(caseType)) {
           if (caseType.includes('overstay')) caseType = 'overstay_appeal';
           else if (caseType.includes('prohibit') || caseType.includes('v_list')) caseType = 'prohibited_persons';
           else if (caseType.includes('high') || caseType.includes('court') || caseType.includes('expedition')) caseType = 'high_court_expedition';
+          else if (caseType.includes('8_4') || caseType.includes('8(4)') || caseType.includes('appeals_8_4')) caseType = 'appeals_8_4';
+          else if (caseType.includes('8_6') || caseType.includes('8(6)') || caseType.includes('appeals_8_6')) caseType = 'appeals_8_6';
           else caseType = 'overstay_appeal';
         }
 
@@ -862,11 +902,11 @@ export default function LegalProjectsView() {
               New Case
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px]">
+          <DialogContent className="sm:max-w-[500px] max-h-[85vh] overflow-hidden flex flex-col">
             <DialogHeader>
               <DialogTitle>Create Legal Case</DialogTitle>
             </DialogHeader>
-            <div className="space-y-4 py-4">
+            <div className="space-y-4 py-4 overflow-y-auto pr-1">
               <div className="space-y-2">
                 <Label>Case Type</Label>
                 <Select value={newCase.case_type} onValueChange={(v: any) => setNewCase({...newCase, case_type: v})}>
@@ -877,9 +917,26 @@ export default function LegalProjectsView() {
                     <SelectItem value="overstay_appeal">Overstay Appeal</SelectItem>
                     <SelectItem value="prohibited_persons">Prohibited Persons (V-list)</SelectItem>
                     <SelectItem value="high_court_expedition">High Court/Expedition</SelectItem>
+                    <SelectItem value="appeals_8_4">Appeals 8(4)</SelectItem>
+                    <SelectItem value="appeals_8_6">Appeals 8(6)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
+              {(newCase.case_type === 'appeals_8_4' || newCase.case_type === 'appeals_8_6') && (
+                <div className="space-y-2">
+                  <Label>VFS Center</Label>
+                  <Select value={newCase.vfs_center} onValueChange={(v) => setNewCase({...newCase, vfs_center: v})}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select VFS center" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {VFS_CENTERS.map(center => (
+                        <SelectItem key={center} value={center}>{center}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <div className="space-y-2">
                 <Label>Case Title</Label>
                 <Input 
@@ -954,7 +1011,7 @@ export default function LegalProjectsView() {
                 />
               </div>
             </div>
-            <DialogFooter>
+            <DialogFooter className="pt-3 border-t">
               <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>Cancel</Button>
               <Button onClick={handleCreateCase} disabled={!newCase.case_title || !newCase.client_name}>
                 Create Case
@@ -1178,6 +1235,8 @@ export default function LegalProjectsView() {
           <TabsTrigger value="overstay_appeal">Overstay Appeal ({cases.filter(c => c.case_type === 'overstay_appeal').length})</TabsTrigger>
           <TabsTrigger value="prohibited_persons">Prohibited Persons ({cases.filter(c => c.case_type === 'prohibited_persons').length})</TabsTrigger>
           <TabsTrigger value="high_court_expedition">High Court ({cases.filter(c => c.case_type === 'high_court_expedition').length})</TabsTrigger>
+          <TabsTrigger value="appeals_8_4">Appeals 8(4) ({cases.filter(c => c.case_type === 'appeals_8_4').length})</TabsTrigger>
+          <TabsTrigger value="appeals_8_6">Appeals 8(6) ({cases.filter(c => c.case_type === 'appeals_8_6').length})</TabsTrigger>
         </TabsList>
       </Tabs>
 

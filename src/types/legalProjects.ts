@@ -15,7 +15,9 @@
 export enum LegalCaseType {
   OVERSTAY_APPEAL = 'overstay_appeal',
   PROHIBITED_PERSONS = 'prohibited_persons',
-  HIGH_COURT_EXPEDITION = 'high_court_expedition'
+    HIGH_COURT_EXPEDITION = 'high_court_expedition',
+    APPEALS_8_4 = 'appeals_8_4',
+    APPEALS_8_6 = 'appeals_8_6'
 }
 
 export enum LegalCaseStatus {
@@ -112,6 +114,37 @@ export enum SettlementOutcome {
   NOT_SETTLED = 'not_settled'
 }
 
+  // ============================================================================
+  // APPEALS 8(4) & 8(6) WORKFLOW
+  // ============================================================================
+
+  export enum AppealsStep {
+    REACH_OUT = 1,
+    PREPARE_APPEAL_DRAFT = 2,
+    APPOINTMENT_BOOKED = 3,
+    SUBMIT_AT_VFS = 4,
+    TRACK_APPLICATION = 5,
+    OUTCOME = 6
+  }
+
+  export const APPEALS_8_4_STEPS: Record<AppealsStep, string> = {
+    [AppealsStep.REACH_OUT]: 'Reach Out to Clients',
+    [AppealsStep.PREPARE_APPEAL_DRAFT]: 'Prepare Appeal Draft',
+    [AppealsStep.APPOINTMENT_BOOKED]: 'Appointment Booked',
+    [AppealsStep.SUBMIT_AT_VFS]: 'Submit Application at VFS Center',
+    [AppealsStep.TRACK_APPLICATION]: 'Track the Application',
+    [AppealsStep.OUTCOME]: 'Outcome'
+  };
+
+  export const APPEALS_8_6_STEPS: Record<AppealsStep, string> = {
+    [AppealsStep.REACH_OUT]: 'Reach Out to Clients',
+    [AppealsStep.PREPARE_APPEAL_DRAFT]: 'Prepare Appeal Draft',
+    [AppealsStep.APPOINTMENT_BOOKED]: 'Appointment Booked',
+    [AppealsStep.SUBMIT_AT_VFS]: 'Submit Application at VFS Center',
+    [AppealsStep.TRACK_APPLICATION]: 'Track the Application',
+    [AppealsStep.OUTCOME]: 'Outcome'
+  };
+
 // ============================================================================
 // STEP HISTORY & TRACKING
 // ============================================================================
@@ -180,7 +213,7 @@ export interface LegalCase {
   step_history: StepHistoryEntry[];
   
   // Specific workflow data based on case_type
-  workflow_data: OverstayAppealData | ProhibitedPersonsData | HighCourtData;
+  workflow_data: OverstayAppealData | ProhibitedPersonsData | HighCourtData | Appeals84Data | Appeals86Data;
   
   // Appeal tracking (for Prohibited Persons)
   appeal_count: number;
@@ -247,6 +280,22 @@ export interface HighCourtData {
   // Final outcome
   final_judgment_date: string | null;
   judgment_outcome: string | null;
+}
+
+export interface Appeals84Data {
+  type: LegalCaseType.APPEALS_8_4;
+  appointment_booked_date: string | null;
+  vfs_center: string | null;
+  tracking_reference: string | null;
+  outcome_result: 'approved' | 'rejected' | 'pending' | null;
+}
+
+export interface Appeals86Data {
+  type: LegalCaseType.APPEALS_8_6;
+  appointment_booked_date: string | null;
+  vfs_center: string | null;
+  tracking_reference: string | null;
+  outcome_result: 'approved' | 'rejected' | 'pending' | null;
 }
 
 // ============================================================================
@@ -416,6 +465,26 @@ export function createDefaultHighCourtData(): HighCourtData {
   };
 }
 
+export function createDefaultAppeals84Data(): Appeals84Data {
+  return {
+    type: LegalCaseType.APPEALS_8_4,
+    appointment_booked_date: null,
+    vfs_center: null,
+    tracking_reference: null,
+    outcome_result: null
+  };
+}
+
+export function createDefaultAppeals86Data(): Appeals86Data {
+  return {
+    type: LegalCaseType.APPEALS_8_6,
+    appointment_booked_date: null,
+    vfs_center: null,
+    tracking_reference: null,
+    outcome_result: null
+  };
+}
+
 export function createInitialStepHistory(caseType: LegalCaseType): StepHistoryEntry[] {
   let steps: Record<number, string>;
   
@@ -428,6 +497,12 @@ export function createInitialStepHistory(caseType: LegalCaseType): StepHistoryEn
       break;
     case LegalCaseType.HIGH_COURT_EXPEDITION:
       steps = HIGH_COURT_STEPS;
+      break;
+    case LegalCaseType.APPEALS_8_4:
+      steps = APPEALS_8_4_STEPS;
+      break;
+    case LegalCaseType.APPEALS_8_6:
+      steps = APPEALS_8_6_STEPS;
       break;
     default:
       steps = {};
