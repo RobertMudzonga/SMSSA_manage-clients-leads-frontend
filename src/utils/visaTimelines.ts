@@ -20,5 +20,7 @@ export const visaTimelines: Record<string, { compilation: string; processing: st
   'Permanent Residence Permit': { compilation: '3-4 weeks', processing: '>2 years' },
   'Overstay Appeal': { compilation: '<10 days', processing: '10-12 weeks' },
   'Legalisation (Good Cause)': { compilation: '1-2 weeks', processing: '2-3 months' },
-  'Prohibition Upliftment': { compilation: '1-2 weeks', processing: '12-18 months' }
+  'Prohibition Upliftment': { compilation: '1-2 weeks', processing: '12-18 months' },
+  'Proof of Permanent Residence': { compilation: '1-2 weeks', processing: '4-6 weeks' },
+  'Citizenship': { compilation: '2-4 weeks', processing: '12-18 months' }
 };

@@ -172,6 +172,8 @@ export default function CreateProjectModal({ isOpen, onClose, onSubmit, clientId
             <option>Overstay Appeal</option>
             <option>Legalisation (Good Cause)</option>
             <option>Prohibition Upliftment</option>
+            <option>Proof of Permanent Residence</option>
+            <option>Citizenship</option>
 
           </select>
           <select
