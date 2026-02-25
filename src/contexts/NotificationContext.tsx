@@ -1,5 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
+// Import to ensure fetch patching is applied
+import '../lib/api';
+
 interface Notification {
   notification_id: number;
   employee_id: number;
@@ -48,12 +51,10 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
 
-  const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000';
-
   const fetchNotifications = async (empId: number) => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_BASE}/api/notifications?employee_id=${empId}`);
+      const response = await fetch(`/api/notifications?employee_id=${empId}`);
       if (response.ok) {
         const data = await response.json();
         setNotifications(data);
@@ -67,7 +68,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
 
   const fetchUnreadCount = async (empId: number) => {
     try {
-      const response = await fetch(`${API_BASE}/api/notifications/unread-count?employee_id=${empId}`);
+      const response = await fetch(`/api/notifications/unread-count?employee_id=${empId}`);
       if (response.ok) {
         const data = await response.json();
         setUnreadCount(data.count);
@@ -79,7 +80,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
 
   const markAsRead = async (notificationId: number) => {
     try {
-      const response = await fetch(`${API_BASE}/api/notifications/${notificationId}/read`, {
+      const response = await fetch(`/api/notifications/${notificationId}/read`, {
         method: 'PATCH',
       });
       if (response.ok) {
@@ -95,7 +96,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
 
   const markAllAsRead = async (empId: number) => {
     try {
-      const response = await fetch(`${API_BASE}/api/notifications/mark-all-read`, {
+      const response = await fetch(`/api/notifications/mark-all-read`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ employee_id: empId }),
@@ -111,7 +112,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
 
   const deleteNotification = async (notificationId: number) => {
     try {
-      const response = await fetch(`${API_BASE}/api/notifications/${notificationId}`, {
+      const response = await fetch(`/api/notifications/${notificationId}`, {
         method: 'DELETE',
       });
       if (response.ok) {
